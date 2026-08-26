@@ -8,26 +8,154 @@ const scoreEl = document.getElementById("score");
 const scoreIconEl = document.getElementById("scoreIcon");
 const timerEl = document.getElementById("timer");
 
-canvas.width = 500;
-canvas.height = window.innerHeight;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// --- BACKEND ---
+const API_BASE = "http://localhost:3000";
+
+function resolveAssetUrl(p) {
+  if (!p) return "";
+  if (/^https?:\/\//i.test(p) || p.startsWith("/uploads/")) {
+    return p.startsWith("/") ? `${API_BASE}${p}` : p;
+  }
+  return p;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// --- CONFIG (fetched from the backend; falls back to these built-in
+// defaults if the backend is unreachable, so the game still runs standalone) ---
+const DEFAULT_CONFIG = {
+  roundDurationSec: 60,
+  countdownSec: 3,
+  leaderboardSize: 5,
+  canvasWidth: 500,
+  basketWidth: 120,
+  basketHeight: 120,
+  basketStartX: 190,
+  basketStartY: 500,
+  difficultyBadChanceBase: 0.3,
+  difficultyBadChanceRamp: 0.15,
+  itemSpeedMin: 2.5,
+  itemSpeedRandomAdd: 2,
+  itemSize: 75,
+  spawnIntervalMinMs: 600,
+  spawnIntervalMaxMs: 1100,
+  spawnIntervalDifficultyFactorMs: 500,
+  targetColor: "#34C4A3",
+  colorHueToleranceDeg: 18,
+  colorSaturationMin: 0.25,
+  colorValueMin: 0.2,
+  trackingEasing: 0.75,
+  trackingMinPixelCount: 5,
+  trackingCanvasWidth: 160,
+  trackingCanvasHeight: 120,
+  cameraWidth: 640,
+  cameraHeight: 480,
+  audio: {
+    countdownBeepFreq: 400,
+    goBeepFreq: 800,
+    catchBeepFreq: 800,
+    hitBeepFreq: 200,
+    beepShortDurationSec: 0.1,
+    beepLongDurationSec: 0.2
+  },
+  assets: {
+    logo: "img/logo.png",
+    startButton: "img/btn.png",
+    basket: "img/basket.png",
+    background: "img/background.png",
+    timeUp: "img/time.png",
+    playAgain: "img/again.png"
+  }
+};
+
+const DEFAULT_BRANDS = [
+  { key: "bb", name: "Bamboo Boy", logoPath: "img/logo/bb.png", scoreIconPath: "img/bb/score.png" },
+  { key: "bm", name: "Broastmasters", logoPath: "img/logo/bm.png", scoreIconPath: "img/bm/score.png" },
+  { key: "do", name: "Domino's", logoPath: "img/logo/do.png", scoreIconPath: "img/do/score.png" },
+  { key: "tb", name: "Taco Bell", logoPath: "img/logo/tb.png", scoreIconPath: "img/tb/score.png" }
+];
+
+const DEFAULT_ITEMS = [
+  { key: "apple", label: "Apple", imagePath: "img/apple.png", points: 10, weight: 10, brand: null },
+  { key: "banana", label: "Banana", imagePath: "img/banana.png", points: 10, weight: 10, brand: null },
+  { key: "strawberry", label: "Strawberry", imagePath: "img/strawberry.png", points: 10, weight: 10, brand: null },
+  { key: "grape", label: "Grape", imagePath: "img/grapes.png", points: 10, weight: 10, brand: null },
+  { key: "bomb", label: "Bomb", imagePath: "img/bomb.png", points: -20, weight: 10, brand: null },
+  ...["bb", "bm", "do", "tb"].flatMap((brand) => {
+    const count = { bb: 2, bm: 5, do: 3, tb: 5 }[brand];
+    return Array.from({ length: count }, (_, i) => ({
+      key: `${brand}_${i + 1}`,
+      label: `${brand} item ${i + 1}`,
+      imagePath: `img/${brand}/${i + 1}.png`,
+      points: 10,
+      weight: 10,
+      brand
+    }));
+  })
+];
+
+let CONFIG = DEFAULT_CONFIG;
+let BRANDS = DEFAULT_BRANDS;
+let ITEMS = DEFAULT_ITEMS;
+let TARGET_HUE = 166;
+
+async function loadRemoteConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/api/config`);
+    if (!res.ok) throw new Error("bad response");
+    const data = await res.json();
+    if (data.game) {
+      CONFIG = {
+        ...DEFAULT_CONFIG,
+        ...data.game,
+        audio: { ...DEFAULT_CONFIG.audio, ...(data.game.audio || {}) },
+        assets: { ...DEFAULT_CONFIG.assets, ...(data.game.assets || {}) }
+      };
+    }
+    if (Array.isArray(data.brands) && data.brands.length) BRANDS = data.brands;
+    if (Array.isArray(data.items) && data.items.length) ITEMS = data.items;
+  } catch (err) {
+    console.error("Config fetch failed, using built-in defaults:", err);
+  }
+}
+
+function hexToHue(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return 166;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255;
+  const g = parseInt(m[1].slice(2, 4), 16) / 255;
+  const b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+  }
+  return h;
+}
 
 // --- ASSETS ---
 const images = {};
 const loadImg = (name, src) => {
   images[name] = new Image();
-  images[name].src = src;
+  images[name].src = resolveAssetUrl(src);
 };
-loadImg("basket", "img/basket.png");
-loadImg("apple", "img/apple.png");
-loadImg("banana", "img/banana.png");
-loadImg("strawberry", "img/strawberry.png");
-loadImg("grape", "img/grapes.png");
-loadImg("bomb", "img/bomb.png");
-loadImg("virtualBg", "img/background.png");
 
-const fruitKeys = ["apple", "banana", "strawberry", "grape"];
-const brandItemCounts = { bb: 2, bm: 5, do: 3, tb: 5 };
+function loadAssets() {
+  loadImg("basket", CONFIG.assets.basket);
+  loadImg("virtualBg", CONFIG.assets.background);
+  ITEMS.forEach((it) => loadImg(it.key, it.imagePath));
+}
+
 let basket = { x: 190, y: 500, width: 120, height: 120 };
 let score = 0,
   timeLeft = 60,
@@ -35,28 +163,25 @@ let score = 0,
 let items = [],
   floatingTexts = [];
 let selectedBrand = null;
-let currentItemKeys = fruitKeys;
 
-function loadBrandAssets(brand) {
-  const count = brandItemCounts[brand];
-  currentItemKeys = [];
-  for (let i = 1; i <= count; i++) {
-    const key = `${brand}_${i}`;
-    loadImg(key, `img/${brand}/${i}.png`);
-    currentItemKeys.push(key);
-  }
-  scoreIconEl.style.content = `url("img/${brand}/score.png")`;
+function itemsForBrand(brand) {
+  return ITEMS.filter((it) => it.brand === brand || it.brand === null);
 }
 
-// --- COLOR-BLOB TRACKING (#34C4A3 rectangle via HSV) ---
-const TRACK_W = 160, TRACK_H = 120;
-const trackCanvas = document.createElement("canvas");
-trackCanvas.width = TRACK_W;
-trackCanvas.height = TRACK_H;
-const trackCtx = trackCanvas.getContext("2d", { willReadFrequently: true });
+function pickWeighted(pool) {
+  const total = pool.reduce((sum, it) => sum + it.weight, 0);
+  let r = Math.random() * total;
+  for (const it of pool) {
+    r -= it.weight;
+    if (r <= 0) return it;
+  }
+  return pool[pool.length - 1];
+}
+
+// --- COLOR-BLOB TRACKING (config-defined color via HSV) ---
+let trackCanvas, trackCtx;
 
 function isTargetColor(r, g, b) {
-  // Convert RGB (0-255) to HSV
   const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
   const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
   const d = max - min;
@@ -73,23 +198,23 @@ function isTargetColor(r, g, b) {
   const s = max === 0 ? 0 : d / max;
   const v = max;
 
-  // Target #34C4A3 (Hue ~166°)
-  // Hue tolerance: 166° ± 18°, Saturation >= 25%, Brightness/Value >= 20%
-  const hueMatch = Math.abs(h - 166) <= 18 || Math.abs(h - 166) >= 342;
-  const satMatch = s >= 0.25;
-  const valMatch = v >= 0.20;
+  const tol = CONFIG.colorHueToleranceDeg;
+  const hueMatch = Math.abs(h - TARGET_HUE) <= tol || Math.abs(h - TARGET_HUE) >= 360 - tol;
+  const satMatch = s >= CONFIG.colorSaturationMin;
+  const valMatch = v >= CONFIG.colorValueMin;
 
   return hueMatch && satMatch && valMatch;
 }
 
 function trackObject() {
-  trackCtx.drawImage(videoElement, 0, 0, TRACK_W, TRACK_H);
-  const { data } = trackCtx.getImageData(0, 0, TRACK_W, TRACK_H);
+  const w = CONFIG.trackingCanvasWidth, h = CONFIG.trackingCanvasHeight;
+  trackCtx.drawImage(videoElement, 0, 0, w, h);
+  const { data } = trackCtx.getImageData(0, 0, w, h);
 
   let sumX = 0, sumY = 0, count = 0;
-  for (let y = 0; y < TRACK_H; y++) {
-    for (let x = 0; x < TRACK_W; x++) {
-      const i = (y * TRACK_W + x) * 4;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
       if (isTargetColor(data[i], data[i + 1], data[i + 2])) {
         sumX += x;
         sumY += y;
@@ -98,38 +223,55 @@ function trackObject() {
     }
   }
 
-  // Lowered threshold to 5 pixels for better sensitivity at distance
-  if (count > 5) {
-    const cx = sumX / count / TRACK_W;
-    const cy = sumY / count / TRACK_H;
-    // Increased easing factor to 0.75 for snappier response
-    basket.x += ((1 - cx) * 500 - basket.width / 2 - basket.x) * 0.75;
-    basket.y += (cy * canvas.height - basket.height / 2 - basket.y) * 0.75;
+  if (count > CONFIG.trackingMinPixelCount) {
+    const cx = sumX / count / w;
+    const cy = sumY / count / h;
+    const easing = CONFIG.trackingEasing;
+    basket.x += ((1 - cx) * CONFIG.canvasWidth - basket.width / 2 - basket.x) * easing;
+    basket.y += (cy * canvas.height - basket.height / 2 - basket.y) * easing;
   }
 }
 
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    trackObject();
-  },
-  width: 640,
-  height: 480
-});
-camera.start();
-
 // --- HELPERS ---
-function getScores() {
-  return JSON.parse(localStorage.getItem("arCatcherScores")) || [];
+async function getScores() {
+  try {
+    const res = await fetch(`${API_BASE}/api/scores/top?limit=${CONFIG.leaderboardSize}`);
+    if (!res.ok) throw new Error("bad response");
+    return await res.json();
+  } catch (err) {
+    console.error("Leaderboard fetch failed:", err);
+    return [];
+  }
 }
 
-function updateUI() {
+async function submitScore(name, points) {
+  try {
+    await fetch(`${API_BASE}/api/scores`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        score: points,
+        brand: selectedBrand,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        userAgent: navigator.userAgent
+      })
+    });
+  } catch (err) {
+    console.error("Score submit failed:", err);
+  }
+}
+
+async function updateUI() {
   const leaderboardList = document.getElementById("leaderboard-list");
   if (!leaderboardList) return;
+  const scores = await getScores();
   leaderboardList.innerHTML =
-    getScores()
+    scores
       .map(
         (s) =>
-          `<div class="score-row"><span>${s.name}</span><span>${s.score}</span></div>`
+          `<div class="score-row"><span>${escapeHtml(s.name)}</span><span>${s.score}</span></div>`
       )
       .join("") || "No missions completed";
 }
@@ -154,30 +296,53 @@ function spawnFloatingText(x, y, text, color) {
 function spawnItem() {
   if (!gameActive) return;
 
-  const difficulty = (60 - timeLeft) / 60;
-  const isGood = Math.random() > 0.3 + difficulty * 0.15;
+  const difficulty = (CONFIG.roundDurationSec - timeLeft) / CONFIG.roundDurationSec;
+  const roster = itemsForBrand(selectedBrand);
+  const goodPool = roster.filter((it) => it.points >= 0);
+  const badPool = roster.filter((it) => it.points < 0);
+  const wantsBad = Math.random() < CONFIG.difficultyBadChanceBase + difficulty * CONFIG.difficultyBadChanceRamp;
+  const pool = wantsBad && badPool.length ? badPool : goodPool;
 
-  items.push({
-    x: Math.random() * (canvas.width - 60),
-    y: -60,
-    imgKey: isGood
-      ? currentItemKeys[Math.floor(Math.random() * currentItemKeys.length)]
-      : "bomb",
-    isGood,
-    speed: (2.5 + Math.random() * 2) * (1 + difficulty),
-    size: 75
-  });
+  if (pool.length) {
+    const chosen = pickWeighted(pool);
+    items.push({
+      x: Math.random() * (canvas.width - CONFIG.itemSize),
+      y: -CONFIG.itemSize,
+      itemKey: chosen.key,
+      points: chosen.points,
+      speed: (CONFIG.itemSpeedMin + Math.random() * CONFIG.itemSpeedRandomAdd) * (1 + difficulty),
+      size: CONFIG.itemSize
+    });
+  }
 
-  const nextSpawn = Math.max(600, 1100 - difficulty * 500);
+  const nextSpawn = Math.max(
+    CONFIG.spawnIntervalMinMs,
+    CONFIG.spawnIntervalMaxMs - difficulty * CONFIG.spawnIntervalDifficultyFactorMs
+  );
   setTimeout(spawnItem, nextSpawn);
 }
 
 function showStartScreen() {
   overlay.innerHTML = `
-        <img src="img/logo.png" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
-        <img src="img/btn.png" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
+        <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
+        <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
     `;
   overlay.style.display = "flex";
+}
+
+function renderBrandSelect() {
+  brandSelect.innerHTML = `
+    <h2>Select Your Brand</h2>
+    <div class="brand-grid">
+      ${BRANDS.map(
+        (b) =>
+          `<img src="${resolveAssetUrl(b.logoPath)}" alt="${escapeHtml(b.name)}" class="brand-logo" data-brand="${escapeHtml(b.key)}">`
+      ).join("")}
+    </div>
+  `;
+  brandSelect.querySelectorAll(".brand-logo").forEach((el) => {
+    el.addEventListener("click", () => selectBrand(el.dataset.brand));
+  });
 }
 
 function showBrandSelect() {
@@ -187,25 +352,26 @@ function showBrandSelect() {
 
 function selectBrand(brand) {
   selectedBrand = brand;
-  loadBrandAssets(brand);
+  const b = BRANDS.find((x) => x.key === brand);
+  if (b && b.scoreIconPath) scoreIconEl.style.content = `url("${resolveAssetUrl(b.scoreIconPath)}")`;
   brandSelect.style.display = "none";
   startGame();
 }
 
 function startGame() {
   overlay.style.display = "none";
-  let count = 3;
+  let count = CONFIG.countdownSec;
   countdownEl.style.display = "block";
   countdownEl.innerText = count;
-  playBeep(400, 0.1);
+  playBeep(CONFIG.audio.countdownBeepFreq, CONFIG.audio.beepShortDurationSec);
   const ci = setInterval(() => {
     count--;
     if (count > 0) {
       countdownEl.innerText = count;
-      playBeep(400, 0.1);
+      playBeep(CONFIG.audio.countdownBeepFreq, CONFIG.audio.beepShortDurationSec);
     } else if (count === 0) {
       countdownEl.innerText = "GO!";
-      playBeep(800, 0.2);
+      playBeep(CONFIG.audio.goBeepFreq, CONFIG.audio.beepLongDurationSec);
     } else {
       clearInterval(ci);
       countdownEl.style.display = "none";
@@ -216,11 +382,12 @@ function startGame() {
 
 function initGame() {
   score = 0;
-  timeLeft = 60;
+  timeLeft = CONFIG.roundDurationSec;
   items = [];
   floatingTexts = [];
   gameActive = true;
   scoreEl.innerText = score;
+  timerEl.innerText = timeLeft;
   spawnItem();
 
   const ti = setInterval(() => {
@@ -231,59 +398,59 @@ function initGame() {
       gameActive = false;
       clearInterval(ti);
 
-      // Show overlay with leaderboard
       overlay.innerHTML = `
-            <img src="img/time.png" alt="AR Fruit Catcher Logo" class="logo">
+            <img src="${resolveAssetUrl(CONFIG.assets.timeUp)}" alt="Time's Up" class="logo">
             <div class="leaderboard">
-              <h3><img class="icon-trophy" /> TOP 5 RECORDS</h3>
+              <h3><img class="icon-trophy" /> TOP ${CONFIG.leaderboardSize} RECORDS</h3>
               <div id="leaderboard-list"></div>
             </div>
-            <img src="img/again.png" alt="Play Again" class="start-btn" onclick="showStartScreen()">
+            <img src="${resolveAssetUrl(CONFIG.assets.playAgain)}" alt="Play Again" class="start-btn" onclick="showStartScreen()">
         `;
       overlay.style.display = "flex";
 
-      const scores = getScores();
-      if (scores.length < 5 || score > scores[scores.length - 1].score) {
-        setTimeout(() => {
-          const name = prompt("TOP 5 SCORE! Name:") || "Player";
-          scores.push({ name, score });
-          scores.sort((a, b) => b.score - a.score);
-          localStorage.setItem(
-            "arCatcherScores",
-            JSON.stringify(scores.slice(0, 5))
-          );
+      (async () => {
+        const scores = await getScores();
+        if (scores.length < CONFIG.leaderboardSize || score > scores[scores.length - 1].score) {
+          setTimeout(async () => {
+            const name = prompt("TOP SCORE! Name:") || "Player";
+            await submitScore(name, score);
+            updateUI();
+          }, 500);
+        } else {
           updateUI();
-        }, 500);
-      }
-      updateUI();
+        }
+      })();
     }
   }, 1000);
+}
+
+// Draws img centered inside the box (x, y, boxSize, boxSize) at its real aspect
+// ratio ("contain" fit) instead of stretching it to fill a forced square —
+// several source images (esp. brand items) aren't square.
+function drawContained(img, x, y, boxSize) {
+  const aspect = img.naturalWidth / img.naturalHeight;
+  const drawW = aspect >= 1 ? boxSize : boxSize * aspect;
+  const drawH = aspect >= 1 ? boxSize / aspect : boxSize;
+  ctx.drawImage(img, x + (boxSize - drawW) / 2, y + (boxSize - drawH) / 2, drawW, drawH);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (images.virtualBg.complete) {
+  if (images.virtualBg && images.virtualBg.complete) {
     ctx.globalAlpha = 0.5;
     ctx.drawImage(images.virtualBg, 0, 0, canvas.width, canvas.height);
     ctx.globalAlpha = 1.0;
   }
 
   if (gameActive) {
-    if (images.basket.complete)
-      ctx.drawImage(
-        images.basket,
-        basket.x,
-        basket.y,
-        basket.width,
-        basket.height
-      );
+    if (images.basket && images.basket.complete)
+      ctx.drawImage(images.basket, basket.x, basket.y, basket.width, basket.height);
 
     items.forEach((item, i) => {
       item.y += item.speed;
-      const img = images[item.imgKey];
-      if (img && img.complete)
-        ctx.drawImage(img, item.x, item.y, item.size, item.size);
+      const img = images[item.itemKey];
+      if (img && img.complete) drawContained(img, item.x, item.y, item.size);
 
       if (
         item.y + item.size > basket.y + 20 &&
@@ -291,15 +458,13 @@ function draw() {
         item.x + item.size > basket.x &&
         item.x < basket.x + basket.width
       ) {
-        if (item.isGood) {
-          score += 10;
-          spawnFloatingText(item.x, item.y, "+10", "#f1c40f");
-          playBeep(800, 0.1);
-        } else {
-          score = Math.max(0, score - 20);
-          spawnFloatingText(item.x, item.y, "-20", "#ff4757");
-          playBeep(200, 0.2);
-        }
+        score = Math.max(0, score + item.points);
+        const sign = item.points >= 0 ? "+" : "";
+        spawnFloatingText(item.x, item.y, `${sign}${item.points}`, item.points >= 0 ? "#f1c40f" : "#ff4757");
+        playBeep(
+          item.points >= 0 ? CONFIG.audio.catchBeepFreq : CONFIG.audio.hitBeepFreq,
+          item.points >= 0 ? CONFIG.audio.beepShortDurationSec : CONFIG.audio.beepLongDurationSec
+        );
         scoreEl.innerText = score;
         items.splice(i, 1);
       }
@@ -324,4 +489,44 @@ function draw() {
 
   requestAnimationFrame(draw);
 }
-draw();
+
+async function init() {
+  await loadRemoteConfig();
+  TARGET_HUE = hexToHue(CONFIG.targetColor);
+
+  // The canvas's on-screen CSS box size (#game-wrapper is fixed at 512x640) is
+  // independent of its internal drawing resolution set here. Using window.innerHeight
+  // for canvas.height made the two mismatch on any window that isn't exactly 640px
+  // tall (i.e. almost always), so the browser stretched X and Y by different
+  // factors when scaling the canvas bitmap into its CSS box — visibly squashing
+  // everything drawn on it (basket, items, background). Deriving canvas.height
+  // from the canvas's actual CSS aspect ratio keeps both scale factors equal.
+  canvas.width = CONFIG.canvasWidth;
+  const canvasRect = canvas.getBoundingClientRect();
+  canvas.height = canvasRect.width > 0
+    ? Math.round(CONFIG.canvasWidth * (canvasRect.height / canvasRect.width))
+    : window.innerHeight;
+  basket = { x: CONFIG.basketStartX, y: CONFIG.basketStartY, width: CONFIG.basketWidth, height: CONFIG.basketHeight };
+
+  trackCanvas = document.createElement("canvas");
+  trackCanvas.width = CONFIG.trackingCanvasWidth;
+  trackCanvas.height = CONFIG.trackingCanvasHeight;
+  trackCtx = trackCanvas.getContext("2d", { willReadFrequently: true });
+
+  loadAssets();
+  renderBrandSelect();
+  showStartScreen();
+
+  const camera = new Camera(videoElement, {
+    onFrame: async () => {
+      trackObject();
+    },
+    width: CONFIG.cameraWidth,
+    height: CONFIG.cameraHeight
+  });
+  camera.start();
+
+  draw();
+}
+
+init();

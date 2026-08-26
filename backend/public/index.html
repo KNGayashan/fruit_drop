@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fruit Drop — Admin</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div id="setup-view" hidden>
+    <form id="setup-form">
+      <h1>Create Admin Account</h1>
+      <p class="hint">No admin account exists yet. Create the one account that will manage this leaderboard.</p>
+      <input type="text" id="setup-username" placeholder="Username" autocomplete="username" required />
+      <input type="password" id="setup-password" placeholder="Password (min 8 characters)" autocomplete="new-password" minlength="8" required />
+      <input type="password" id="setup-password-confirm" placeholder="Confirm password" autocomplete="new-password" minlength="8" required />
+      <button type="submit"><span class="btn-label">Create account</span></button>
+      <p id="setup-error" class="error"></p>
+    </form>
+  </div>
+
+  <div id="login-view" hidden>
+    <form id="login-form">
+      <h1>Admin Login</h1>
+      <input type="text" id="username" placeholder="Username" autocomplete="username" required />
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" required />
+      <button type="submit"><span class="btn-label">Log in</span></button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </div>
+
+  <div id="dashboard-view" hidden>
+    <header>
+      <h1>AR Fruit Catcher — Leaderboard Admin</h1>
+      <div class="header-actions">
+        <a id="view-game-link" class="secondary button-link" href="http://localhost:8000/index.html" target="_blank" rel="noopener">View Game ↗</a>
+        <button id="change-password-btn" class="secondary">Change password</button>
+        <button id="logout-btn">Log out</button>
+      </div>
+    </header>
+
+    <form id="change-password-form" class="inline-panel" hidden>
+      <input type="password" id="current-password" placeholder="Current password" autocomplete="current-password" required />
+      <input type="password" id="new-password" placeholder="New password (min 8 characters)" autocomplete="new-password" minlength="8" required />
+      <button type="submit"><span class="btn-label">Update password</span></button>
+      <button type="button" id="cancel-change-password" class="secondary">Cancel</button>
+      <p id="change-password-error" class="error"></p>
+      <p id="change-password-success" class="success"></p>
+    </form>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="leaderboard">Leaderboard</button>
+      <button class="tab-btn" data-tab="settings">Game Settings</button>
+      <button class="tab-btn" data-tab="brands">Brands</button>
+      <button class="tab-btn" data-tab="items">Items</button>
+    </nav>
+
+    <section id="tab-leaderboard" class="tab-panel">
+      <section id="stats" class="stats"></section>
+      <section id="screen-breakdown" class="stats"></section>
+      <section>
+        <div class="toolbar">
+          <label>Brand
+            <select id="brand-filter">
+              <option value="">All</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table id="scores-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Score</th>
+                <th>Brand</th>
+                <th>Screen</th>
+                <th>Device</th>
+                <th>IP</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button id="prev-page">Prev</button>
+          <span id="page-label"></span>
+          <button id="next-page">Next</button>
+        </div>
+      </section>
+    </section>
+
+    <section id="tab-settings" class="tab-panel" hidden>
+      <form id="settings-form">
+        <div id="settings-fields"></div>
+        <div class="settings-actions">
+          <button type="submit"><span class="btn-label">Save settings</span></button>
+          <p id="settings-error" class="error"></p>
+          <p id="settings-success" class="success"></p>
+        </div>
+      </form>
+
+      <h3>Core assets</h3>
+      <div id="asset-fields" class="asset-grid"></div>
+
+      <details class="advanced-json">
+        <summary>Advanced: edit raw config JSON</summary>
+        <p class="hint">Every field the game reads lives in this object — use this if a field isn't exposed above.</p>
+        <textarea id="settings-raw-json" rows="16" spellcheck="false"></textarea>
+        <button type="button" id="settings-raw-save" class="secondary">Save raw JSON</button>
+        <p id="settings-raw-error" class="error"></p>
+      </details>
+    </section>
+
+    <section id="tab-brands" class="tab-panel" hidden>
+      <form id="brand-form" class="entity-form">
+        <input type="text" id="brand-key" placeholder="Key (e.g. kfc)" required />
+        <input type="text" id="brand-name" placeholder="Display name" required />
+        <button type="submit"><span class="btn-label">Add brand</span></button>
+        <p id="brand-form-error" class="error"></p>
+      </form>
+      <div id="brands-list" class="entity-list"></div>
+    </section>
+
+    <section id="tab-items" class="tab-panel" hidden>
+      <div class="toolbar">
+        <label>Filter by brand
+          <select id="item-brand-filter">
+            <option value="">All items</option>
+            <option value="__global__">Global (shared across brands)</option>
+          </select>
+        </label>
+      </div>
+      <form id="item-form" class="entity-form">
+        <input type="text" id="item-key" placeholder="Key (e.g. mango)" required />
+        <input type="text" id="item-label" placeholder="Label" required />
+        <input type="number" id="item-points" placeholder="Points" value="10" required />
+        <input type="number" id="item-weight" placeholder="Weight" value="10" min="1" required />
+        <select id="item-brand">
+          <option value="">Global (all brands)</option>
+        </select>
+        <input type="file" id="item-image" accept="image/*" required />
+        <button type="submit"><span class="btn-label">Add item</span></button>
+        <p id="item-form-error" class="error"></p>
+      </form>
+      <div id="items-list" class="entity-list"></div>
+    </section>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
