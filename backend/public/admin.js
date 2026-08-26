@@ -405,6 +405,7 @@ const SETTINGS_FIELDS = [
   { group: "Basket & canvas", key: "basketHeight", label: "Basket height (px)" },
   { group: "Basket & canvas", key: "basketStartX", label: "Basket start X" },
   { group: "Basket & canvas", key: "basketStartY", label: "Basket start Y" },
+  { group: "Basket & canvas", key: "backgroundMode", label: "Background mode", type: "select", options: ["image", "camera", "virtual"] },
   { group: "Color tracking", key: "targetColor", label: "Tracked color", type: "color" },
   { group: "Color tracking", key: "colorHueToleranceDeg", label: "Hue tolerance (deg)" },
   { group: "Color tracking", key: "colorSaturationMin", label: "Min saturation (0-1)", step: "0.01" },
@@ -442,6 +443,16 @@ const rawJsonError = document.getElementById("settings-raw-error");
 
 let currentConfig = null;
 
+function renderSettingInput(f, config) {
+  const value = getPath(config, f.key);
+  if (f.type === "select") {
+    return `<select data-key="${f.key}">${f.options
+      .map((opt) => `<option value="${opt}" ${opt === value ? "selected" : ""}>${escapeHtml(opt)}</option>`)
+      .join("")}</select>`;
+  }
+  return `<input type="${f.type || "number"}" data-key="${f.key}" value="${value}" ${f.step ? `step="${f.step}"` : ""} />`;
+}
+
 function renderSettings(config) {
   currentConfig = config;
 
@@ -456,7 +467,7 @@ function renderSettings(config) {
           (f) => `
         <label class="field-row">
           <span>${escapeHtml(f.label)}</span>
-          <input type="${f.type || "number"}" data-key="${f.key}" value="${getPath(config, f.key)}" ${f.step ? `step="${f.step}"` : ""} />
+          ${renderSettingInput(f, config)}
         </label>`
         )
         .join("")}
@@ -487,8 +498,8 @@ settingsForm.addEventListener("submit", async (e) => {
   settingsSuccess.textContent = "";
 
   const updates = {};
-  settingsFieldsEl.querySelectorAll("input[data-key]").forEach((input) => {
-    const value = input.type === "number" ? Number(input.value) : input.value;
+  settingsFieldsEl.querySelectorAll("input[data-key], select[data-key]").forEach((input) => {
+    const value = input.tagName === "SELECT" || input.type !== "number" ? input.value : Number(input.value);
     setPath(updates, input.dataset.key, value);
   });
 

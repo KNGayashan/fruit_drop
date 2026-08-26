@@ -54,6 +54,16 @@ Visit **http://localhost:3000/admin/**. On first visit you'll see a "Create Admi
 
 Changes made here take effect the next time the game page is loaded (or reloaded).
 
+## 5. Background mode (live camera / virtual background)
+
+Under **Game Settings → Basket & canvas → Background mode**, choose how the game canvas's background is drawn:
+
+- **`image`** (default) — the static background image, unchanged from before.
+- **`camera`** — the live webcam feed, mirrored, fills the background.
+- **`virtual`** — a Zoom-style cutout: the player is segmented out of the camera feed and composited over the configured background image (per-brand if one's selected). Requires a real person in frame and a browser with WebGL support; if the segmentation model fails to load, it silently falls back to `image`.
+
+Save the setting, then reload the game page to see the change.
+
 ## Troubleshooting
 
 - **Leaderboard empty / settings not reflecting admin changes** — backend isn't running or `CORS_ORIGIN` in `backend/.env` doesn't match the frontend's actual origin (default assumes `http://localhost:8000`).

@@ -56,6 +56,7 @@ const DEFAULT_CONFIG = {
   trackingCanvasHeight: 120,
   cameraWidth: 640,
   cameraHeight: 480,
+  backgroundMode: "image",
   audio: {
     countdownBeepFreq: 400,
     goBeepFreq: 800,
@@ -189,6 +190,24 @@ function pickWeighted(pool) {
 
 // --- COLOR-BLOB TRACKING (config-defined color via HSV) ---
 let trackCanvas, trackCtx;
+
+// --- VIRTUAL BACKGROUND (MediaPipe Selfie Segmentation, opt-in via CONFIG.backgroundMode) ---
+let segCanvas, segCtx;
+let selfieSegmentation = null;
+let segmentationReady = false;
+
+function onSegmentationResults(results) {
+  segCtx.save();
+  segCtx.clearRect(0, 0, segCanvas.width, segCanvas.height);
+  segCtx.drawImage(results.segmentationMask, 0, 0, segCanvas.width, segCanvas.height);
+  segCtx.globalCompositeOperation = "source-in";
+  segCtx.drawImage(results.image, 0, 0, segCanvas.width, segCanvas.height);
+  segCtx.globalCompositeOperation = "destination-over";
+  const bg = currentBackgroundImage();
+  if (bg && bg.complete) segCtx.drawImage(bg, 0, 0, segCanvas.width, segCanvas.height);
+  segCtx.restore();
+  segmentationReady = true;
+}
 
 function isTargetColor(r, g, b) {
   const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
@@ -446,11 +465,25 @@ function drawContained(img, x, y, boxSize) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const bgImg = currentBackgroundImage();
-  if (bgImg && bgImg.complete) {
-    ctx.globalAlpha = 0.5;
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = 1.0;
+  if (CONFIG.backgroundMode === "camera") {
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else if (CONFIG.backgroundMode === "virtual" && segmentationReady) {
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(segCanvas, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  } else {
+    const bgImg = currentBackgroundImage();
+    if (bgImg && bgImg.complete) {
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1.0;
+    }
   }
 
   if (gameActive) {
@@ -523,6 +556,23 @@ async function init() {
   trackCanvas.height = CONFIG.trackingCanvasHeight;
   trackCtx = trackCanvas.getContext("2d", { willReadFrequently: true });
 
+  segCanvas = document.createElement("canvas");
+  segCanvas.width = CONFIG.cameraWidth;
+  segCanvas.height = CONFIG.cameraHeight;
+  segCtx = segCanvas.getContext("2d");
+
+  if (CONFIG.backgroundMode === "virtual") {
+    if (typeof SelfieSegmentation !== "undefined") {
+      selfieSegmentation = new SelfieSegmentation({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+      });
+      selfieSegmentation.setOptions({ modelSelection: 1, selfieMode: false });
+      selfieSegmentation.onResults(onSegmentationResults);
+    } else {
+      console.error("SelfieSegmentation failed to load; falling back to the static background.");
+    }
+  }
+
   loadAssets();
   renderBrandSelect();
   showStartScreen();
@@ -530,6 +580,13 @@ async function init() {
   const camera = new Camera(videoElement, {
     onFrame: async () => {
       trackObject();
+      if (selfieSegmentation) {
+        try {
+          await selfieSegmentation.send({ image: videoElement });
+        } catch (err) {
+          console.error("Segmentation frame failed:", err);
+        }
+      }
     },
     width: CONFIG.cameraWidth,
     height: CONFIG.cameraHeight

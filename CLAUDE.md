@@ -16,7 +16,16 @@ python -m http.server 8000
 
 then visit `http://localhost:8000/index.html`. Camera permission must be granted for tracking to work.
 
-The backend (`cd backend && npm install && npm start`, see [backend/README.md](backend/README.md)) must also be running — the game fetches its entire config (not just the leaderboard) from it on load. If the backend is unreachable, the game falls back to built-in defaults in `script.js` (kept identical to the backend's seed data) so it still runs standalone, just without live leaderboard/admin edits.
+The backend (see [backend/README.md](backend/README.md)) must also be running — the game fetches its entire config (not just the leaderboard) from it on load. If the backend is unreachable, the game falls back to built-in defaults in `script.js` (kept identical to the backend's seed data) so it still runs standalone, just without live leaderboard/admin edits.
+
+```
+cd backend
+npm install
+cp .env.example .env   # then set a real JWT_SECRET — server.js throws on startup without one
+npm start               # or `npm run dev` for --watch
+```
+
+API on `http://localhost:3000`, admin dashboard at `http://localhost:3000/admin/` (first visit prompts you to create the one admin account).
 
 There are no automated tests, linters, or build steps to run.
 
@@ -41,6 +50,8 @@ Key pieces, in the order they appear in [script.js](script.js):
 ## Backend / admin-configurable everything
 
 See [backend/README.md](backend/README.md) for the full API and data model. In short: `game_config` (one JSON blob covering timing/scoring/difficulty/tracking/audio/core-asset-paths), `brands`, and `items` (fruits and bombs — a single table; what makes something a "bomb" is just `points < 0`, and `brand = NULL` means the item spawns for every brand) all live in SQLite and are editable from the admin dashboard (`/admin/`, Settings/Brands/Items tabs), with image fields uploaded through the dashboard (`POST /api/admin/uploads`) rather than referencing files on disk. The game frontend has zero knowledge of any of this beyond the one `GET /api/config` fetch at load — adding a new fruit, retuning the tracked color, or standing up a new brand never requires a script.js change.
+
+The SQLite file lives at `backend/data/scores.db` (gitignored); deleting it resets everything — leaderboard, admin account, and config/brands/items — back to the seeded defaults in [backend/db.js](backend/db.js) on next server start. [backend/server.js](backend/server.js) also mounts the root [img/](img/) folder at `/game-assets` (separate from `/uploads`) purely so the admin dashboard, running on a different origin/port, can render thumbnail previews for un-edited default items — the game frontend itself never requests `/game-assets`.
 
 ## Assets
 

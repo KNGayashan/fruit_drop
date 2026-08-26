@@ -104,6 +104,7 @@ const DEFAULT_GAME_CONFIG = {
   trackingCanvasHeight: 120,
   cameraWidth: 640,
   cameraHeight: 480,
+  backgroundMode: "image",
   audio: {
     countdownBeepFreq: 400,
     goBeepFreq: 800,

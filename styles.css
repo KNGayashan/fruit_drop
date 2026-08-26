@@ -150,11 +150,14 @@ canvas {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   width: 100%;
-  max-width: 340px;
+  justify-items: center;
+  justify-content: center;
+  align-items: center;
+  /* max-width: 340px; */
 }
 
 .brand-logo {
-  width: 150px;
+  width: 85%;
   padding: 15px;
   background: #fff;
   border-radius: 15px;
