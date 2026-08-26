@@ -9,6 +9,7 @@ const scoreIconEl = document.getElementById("scoreIcon");
 const timerEl = document.getElementById("timer");
 const gameBadgeEl = document.getElementById("game-badge");
 const badgeLogoEl = document.getElementById("badgeLogo");
+const statsHudEl = document.getElementById("statsHud");
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -77,10 +78,10 @@ const DEFAULT_CONFIG = {
 };
 
 const DEFAULT_BRANDS = [
-  { key: "bb", name: "Bamboo Boy", logoPath: "img/logo/bb.png", scoreIconPath: "img/bb/score.png" },
-  { key: "bm", name: "Broastmasters", logoPath: "img/logo/bm.png", scoreIconPath: "img/bm/score.png" },
-  { key: "do", name: "Domino's", logoPath: "img/logo/do.png", scoreIconPath: "img/do/score.png" },
-  { key: "tb", name: "Taco Bell", logoPath: "img/logo/tb.png", scoreIconPath: "img/tb/score.png" }
+  { key: "bb", name: "Bamboo Boy", logoPath: "img/logo/bb.png", scoreIconPath: "img/bb/score.png", primaryColor: "#e0393e", secondaryColor: "#2f9e44" },
+  { key: "bm", name: "Broastmasters", logoPath: "img/logo/bm.png", scoreIconPath: "img/bm/score.png", primaryColor: "#e8720c", secondaryColor: "#ffd43b" },
+  { key: "do", name: "Domino's", logoPath: "img/logo/do.png", scoreIconPath: "img/do/score.png", primaryColor: "#0066a4", secondaryColor: "#e31837" },
+  { key: "tb", name: "Taco Bell", logoPath: "img/logo/tb.png", scoreIconPath: "img/tb/score.png", primaryColor: "#702f8f", secondaryColor: "#ff5c8d" }
 ];
 
 const DEFAULT_ITEMS = [
@@ -175,6 +176,21 @@ let score = 0,
 let items = [],
   floatingTexts = [];
 let selectedBrand = null;
+
+// --- BRAND THEMING (frame/badge/HUD color, driven by the selected brand) ---
+const DEFAULT_THEME_PRIMARY = "#2f9e44";
+const DEFAULT_THEME_SECONDARY = "#ffd43b";
+let currentThemeColor = DEFAULT_THEME_PRIMARY;
+
+function applyBrandTheme(primary, secondary) {
+  document.documentElement.style.setProperty("--brand-primary", primary);
+  document.documentElement.style.setProperty("--brand-secondary", secondary);
+  currentThemeColor = primary;
+}
+
+function resetTheme() {
+  applyBrandTheme(DEFAULT_THEME_PRIMARY, DEFAULT_THEME_SECONDARY);
+}
 
 function itemsForBrand(brand) {
   return ITEMS.filter((it) => it.brand === brand || it.brand === null);
@@ -353,7 +369,7 @@ function drawSplat(x, y, life) {
     else ctx.lineTo(px, py);
   }
   ctx.closePath();
-  ctx.fillStyle = "#1a1a1a";
+  ctx.fillStyle = currentThemeColor;
   ctx.fill();
   ctx.restore();
 }
@@ -390,7 +406,9 @@ function spawnItem() {
 
 function showStartScreen() {
   gameBadgeEl.hidden = true;
+  statsHudEl.hidden = true;
   countdownActive = false;
+  resetTheme();
   overlay.innerHTML = `
         <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
         <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
@@ -401,6 +419,7 @@ function showStartScreen() {
 function renderBrandSelect() {
   brandSelect.innerHTML = `
     <h2>Select Your Brand</h2>
+    <div class="section-sub">Each brand brings its own challenge</div>
     <div class="brand-grid">
       ${BRANDS.map(
         (b) =>
@@ -426,6 +445,8 @@ function selectBrand(brand) {
     badgeLogoEl.src = resolveAssetUrl(b.logoPath);
     gameBadgeEl.hidden = false;
   }
+  statsHudEl.hidden = false;
+  applyBrandTheme(b?.primaryColor || DEFAULT_THEME_PRIMARY, b?.secondaryColor || DEFAULT_THEME_SECONDARY);
   brandSelect.style.display = "none";
   startGame();
 }

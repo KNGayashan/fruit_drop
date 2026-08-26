@@ -14,7 +14,9 @@ router.get("/", (req, res) => {
       name: b.name,
       logoPath: b.logo_path,
       scoreIconPath: b.score_icon_path,
-      backgroundPath: b.background_path
+      backgroundPath: b.background_path,
+      primaryColor: b.primary_color,
+      secondaryColor: b.secondary_color
     }));
 
   const items = db

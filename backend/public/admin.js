@@ -587,6 +587,12 @@ async function loadBrands() {
       <div class="entity-fields">
         <input class="field-input" data-field="name" value="${escapeHtml(b.name)}" />
         <span class="key-badge">${escapeHtml(b.key)}</span>
+        <label class="color-label" title="Primary color">
+          <input type="color" class="color-input" data-field="primaryColor" value="${b.primary_color}" />
+        </label>
+        <label class="color-label" title="Secondary color">
+          <input type="color" class="color-input" data-field="secondaryColor" value="${b.secondary_color}" />
+        </label>
         <label class="checkbox-label"><input type="checkbox" data-field="active" ${b.active ? "checked" : ""}/> Active</label>
         <input type="number" class="sort-input" data-field="sortOrder" value="${b.sort_order}" title="Sort order" />
         <button type="button" class="delete-btn secondary" data-action="delete">Delete</button>
@@ -602,11 +608,13 @@ brandForm.addEventListener("submit", async (e) => {
 
   const key = document.getElementById("brand-key").value;
   const name = document.getElementById("brand-name").value;
+  const primaryColor = document.getElementById("brand-primary-color").value;
+  const secondaryColor = document.getElementById("brand-secondary-color").value;
 
   const res = await authedFetch("/api/admin/brands", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key, name })
+    body: JSON.stringify({ key, name, primaryColor, secondaryColor })
   });
   const data = await res.json();
   if (!res.ok) {

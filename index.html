@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AR Fruit Catcher - Pro Edition</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"
     crossorigin="anonymous"></script>
@@ -15,20 +18,30 @@
 
 <body>
   <div id="game-wrapper">
-    <div id="game-frame"></div>
+    <div id="game-frame">
+      <div class="cloud" style="width:12%; height:4%; top:6%; left:6%;"></div>
+      <div class="cloud" style="width:9%; height:3%; top:10%; left:60%;"></div>
+      <div class="cloud" style="width:8%; height:2.6%; top:85%; left:12%; opacity:0.7;"></div>
+      <svg class="hill-svg" viewBox="0 0 868 1068" preserveAspectRatio="none">
+        <path class="hill-fill" d="M0,0 L868,0 L868,70 Q795,110 723,70 Q650,30 578,70 Q505,110 433,70 Q360,30 288,70 Q215,110 143,70 Q70,30 0,70 Z"/>
+        <path class="hill-fill" d="M0,1068 L868,1068 L868,998 Q795,958 723,998 Q650,1038 578,998 Q505,958 433,998 Q360,1038 288,998 Q215,958 143,998 Q70,1038 0,998 Z"/>
+        <rect x="0" y="0" width="22" height="1068" class="hill-fill"/>
+        <rect x="846" y="0" width="22" height="1068" class="hill-fill"/>
+      </svg>
+    </div>
     <div id="game-badge" hidden><img id="badgeLogo" alt="" /></div>
 
     <div id="game-inner">
       <video id="input_video" autoplay playsinline></video>
       <div id="countdown"></div>
 
-      <div class="stats">
-        <div class="stat-box stat-box--score">
+      <div class="stats" id="statsHud" hidden>
+        <div class="stat-medal stat-medal--score">
           <img id="scoreIcon" class="stat-icon" alt="" />
           <span id="score">0</span>
           <label>Points</label>
         </div>
-        <div class="stat-box stat-box--timer">
+        <div class="stat-medal stat-medal--timer">
           <span id="timer">60</span>
           <label>Timer</label>
         </div>

@@ -234,6 +234,9 @@ legend { padding: 0 6px; font-size: 13px; color: #9aa7b3; font-weight: 600; }
 .checkbox-label input { width: auto; padding: 0; }
 .points-input, .weight-input, .sort-input { width: 70px; }
 
+.color-label { display: inline-flex; }
+.color-input { width: 36px; height: 36px; padding: 2px; cursor: pointer; }
+
 .stats, .stat-row {
   display: flex;
   flex-wrap: wrap;

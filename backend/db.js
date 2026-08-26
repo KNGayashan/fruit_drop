@@ -52,11 +52,34 @@ db.exec(`
   )
 `);
 
-// Migration: earlier versions of this table didn't have background_path.
+// Migrations: earlier versions of this table didn't have these columns.
 // CREATE TABLE IF NOT EXISTS won't add columns to an already-existing table.
 const brandColumns = db.prepare("PRAGMA table_info(brands)").all().map((c) => c.name);
 if (!brandColumns.includes("background_path")) {
   db.exec("ALTER TABLE brands ADD COLUMN background_path TEXT");
+}
+const addedColorColumns = !brandColumns.includes("primary_color");
+if (addedColorColumns) {
+  db.exec("ALTER TABLE brands ADD COLUMN primary_color TEXT NOT NULL DEFAULT '#2f9e44'");
+}
+if (!brandColumns.includes("secondary_color")) {
+  db.exec("ALTER TABLE brands ADD COLUMN secondary_color TEXT NOT NULL DEFAULT '#ffd43b'");
+}
+if (addedColorColumns) {
+  // Backfill known default brands with curated colors instead of leaving
+  // them all on the generic default the ALTER TABLE just applied — but only
+  // brands that still hold that generic value, so any admin customization
+  // that could theoretically land between these statements isn't clobbered.
+  const curated = {
+    bb: ["#e0393e", "#2f9e44"],
+    bm: ["#e8720c", "#ffd43b"],
+    do: ["#0066a4", "#e31837"],
+    tb: ["#702f8f", "#ff5c8d"]
+  };
+  const updateColor = db.prepare(
+    "UPDATE brands SET primary_color = ?, secondary_color = ? WHERE key = ? AND primary_color = '#2f9e44'"
+  );
+  Object.entries(curated).forEach(([key, [primary, secondary]]) => updateColor.run(primary, secondary, key));
 }
 
 db.exec(`
@@ -128,16 +151,16 @@ if (db.prepare("SELECT COUNT(*) AS c FROM game_config").get().c === 0) {
 
 if (db.prepare("SELECT COUNT(*) AS c FROM brands").get().c === 0) {
   const insertBrand = db.prepare(
-    "INSERT INTO brands (key, name, logo_path, score_icon_path, sort_order) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO brands (key, name, logo_path, score_icon_path, primary_color, secondary_color, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   const defaultBrands = [
-    { key: "bb", name: "Bamboo Boy" },
-    { key: "bm", name: "Broastmasters" },
-    { key: "do", name: "Domino's" },
-    { key: "tb", name: "Taco Bell" }
+    { key: "bb", name: "Bamboo Boy", primary: "#e0393e", secondary: "#2f9e44" },
+    { key: "bm", name: "Broastmasters", primary: "#e8720c", secondary: "#ffd43b" },
+    { key: "do", name: "Domino's", primary: "#0066a4", secondary: "#e31837" },
+    { key: "tb", name: "Taco Bell", primary: "#702f8f", secondary: "#ff5c8d" }
   ];
   defaultBrands.forEach((b, i) => {
-    insertBrand.run(b.key, b.name, `img/logo/${b.key}.png`, `img/${b.key}/score.png`, i);
+    insertBrand.run(b.key, b.name, `img/logo/${b.key}.png`, `img/${b.key}/score.png`, b.primary, b.secondary, i);
   });
 }
 

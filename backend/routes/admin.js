@@ -121,8 +121,10 @@ router.get("/brands", (req, res) => {
   res.json(db.prepare("SELECT * FROM brands ORDER BY sort_order, id").all());
 });
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
 router.post("/brands", (req, res) => {
-  const { key, name, logoPath, scoreIconPath, backgroundPath, active, sortOrder } = req.body || {};
+  const { key, name, logoPath, scoreIconPath, backgroundPath, primaryColor, secondaryColor, active, sortOrder } = req.body || {};
   const cleanKey = String(key || "").trim().toLowerCase().slice(0, 20);
   const cleanName = String(name || "").trim().slice(0, 60);
 
@@ -130,11 +132,18 @@ router.post("/brands", (req, res) => {
     return res.status(400).json({ error: "Key must be lowercase letters, numbers, - or _ only." });
   }
   if (!cleanName) return res.status(400).json({ error: "Name is required." });
+  if (primaryColor !== undefined && !HEX_COLOR.test(primaryColor)) {
+    return res.status(400).json({ error: "Primary color must be a hex color like #2f9e44." });
+  }
+  if (secondaryColor !== undefined && !HEX_COLOR.test(secondaryColor)) {
+    return res.status(400).json({ error: "Secondary color must be a hex color like #ffd43b." });
+  }
 
   try {
     const info = db
       .prepare(
-        "INSERT INTO brands (key, name, logo_path, score_icon_path, background_path, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        `INSERT INTO brands (key, name, logo_path, score_icon_path, background_path, primary_color, secondary_color, active, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         cleanKey,
@@ -142,6 +151,8 @@ router.post("/brands", (req, res) => {
         logoPath || null,
         scoreIconPath || null,
         backgroundPath || null,
+        primaryColor || "#2f9e44",
+        secondaryColor || "#ffd43b",
         active === false ? 0 : 1,
         Number.isInteger(sortOrder) ? sortOrder : 0
       );
@@ -155,17 +166,26 @@ router.put("/brands/:id", (req, res) => {
   const existing = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "Not found" });
 
-  const { name, logoPath, scoreIconPath, backgroundPath, active, sortOrder } = req.body || {};
+  const { name, logoPath, scoreIconPath, backgroundPath, primaryColor, secondaryColor, active, sortOrder } = req.body || {};
   const cleanName = name !== undefined ? String(name).trim().slice(0, 60) : existing.name;
   if (!cleanName) return res.status(400).json({ error: "Name is required." });
+  if (primaryColor !== undefined && !HEX_COLOR.test(primaryColor)) {
+    return res.status(400).json({ error: "Primary color must be a hex color like #2f9e44." });
+  }
+  if (secondaryColor !== undefined && !HEX_COLOR.test(secondaryColor)) {
+    return res.status(400).json({ error: "Secondary color must be a hex color like #ffd43b." });
+  }
 
   db.prepare(
-    "UPDATE brands SET name = ?, logo_path = ?, score_icon_path = ?, background_path = ?, active = ?, sort_order = ? WHERE id = ?"
+    `UPDATE brands SET name = ?, logo_path = ?, score_icon_path = ?, background_path = ?,
+     primary_color = ?, secondary_color = ?, active = ?, sort_order = ? WHERE id = ?`
   ).run(
     cleanName,
     logoPath !== undefined ? logoPath : existing.logo_path,
     scoreIconPath !== undefined ? scoreIconPath : existing.score_icon_path,
     backgroundPath !== undefined ? backgroundPath : existing.background_path,
+    primaryColor !== undefined ? primaryColor : existing.primary_color,
+    secondaryColor !== undefined ? secondaryColor : existing.secondary_color,
     active !== undefined ? (active ? 1 : 0) : existing.active,
     Number.isInteger(sortOrder) ? sortOrder : existing.sort_order,
     req.params.id
