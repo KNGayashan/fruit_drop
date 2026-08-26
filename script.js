@@ -170,7 +170,8 @@ function currentBackgroundImage() {
 let basket = { x: 190, y: 500, width: 120, height: 120 };
 let score = 0,
   timeLeft = 60,
-  gameActive = false;
+  gameActive = false,
+  countdownActive = false;
 let items = [],
   floatingTexts = [];
 let selectedBrand = null;
@@ -389,6 +390,7 @@ function spawnItem() {
 
 function showStartScreen() {
   gameBadgeEl.hidden = true;
+  countdownActive = false;
   overlay.innerHTML = `
         <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
         <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
@@ -430,6 +432,7 @@ function selectBrand(brand) {
 
 function startGame() {
   overlay.style.display = "none";
+  countdownActive = true;
   let count = CONFIG.countdownSec;
   countdownEl.style.display = "block";
   countdownEl.innerText = count;
@@ -455,6 +458,7 @@ function initGame() {
   timeLeft = CONFIG.roundDurationSec;
   items = [];
   floatingTexts = [];
+  countdownActive = false;
   gameActive = true;
   scoreEl.innerText = score;
   timerEl.innerText = timeLeft;
@@ -503,9 +507,11 @@ function draw() {
     ctx.globalAlpha = 1.0;
   }
 
-  if (gameActive) {
-    drawPersonLayer();
+  // Visible through the countdown too, so the player can see themselves and
+  // get in position before "GO!" — but not on the start/brand-select/end screens.
+  if (gameActive || countdownActive) drawPersonLayer();
 
+  if (gameActive) {
     if (images.basket && images.basket.complete)
       ctx.drawImage(images.basket, basket.x, basket.y, basket.width, basket.height);
 
