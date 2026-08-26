@@ -503,9 +503,9 @@ function draw() {
     ctx.globalAlpha = 1.0;
   }
 
-  drawPersonLayer();
-
   if (gameActive) {
+    drawPersonLayer();
+
     if (images.basket && images.basket.complete)
       ctx.drawImage(images.basket, basket.x, basket.y, basket.width, basket.height);
 
