@@ -52,6 +52,13 @@ db.exec(`
   )
 `);
 
+// Migration: earlier versions of this table didn't have background_path.
+// CREATE TABLE IF NOT EXISTS won't add columns to an already-existing table.
+const brandColumns = db.prepare("PRAGMA table_info(brands)").all().map((c) => c.name);
+if (!brandColumns.includes("background_path")) {
+  db.exec("ALTER TABLE brands ADD COLUMN background_path TEXT");
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

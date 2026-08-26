@@ -205,6 +205,13 @@ legend { padding: 0 6px; font-size: 13px; color: #9aa7b3; font-weight: 600; }
 
 .img-upload { text-align: center; font-size: 11px; }
 .img-upload input[type=file] { width: 90px; font-size: 10px; margin-top: 4px; }
+.clear-bg-btn {
+  display: block;
+  width: 90px;
+  margin: 4px auto 0;
+  padding: 4px;
+  font-size: 10px;
+}
 .thumb-label { display: block; color: #9aa7b3; margin-top: 2px; }
 
 .entity-fields {

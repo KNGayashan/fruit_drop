@@ -13,7 +13,8 @@ router.get("/", (req, res) => {
       key: b.key,
       name: b.name,
       logoPath: b.logo_path,
-      scoreIconPath: b.score_icon_path
+      scoreIconPath: b.score_icon_path,
+      backgroundPath: b.background_path
     }));
 
   const items = db

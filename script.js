@@ -154,6 +154,15 @@ function loadAssets() {
   loadImg("basket", CONFIG.assets.basket);
   loadImg("virtualBg", CONFIG.assets.background);
   ITEMS.forEach((it) => loadImg(it.key, it.imagePath));
+  BRANDS.forEach((b) => {
+    if (b.backgroundPath) loadImg(`brand_bg_${b.key}`, b.backgroundPath);
+  });
+}
+
+// Per-brand background if one's set, else the global default.
+function currentBackgroundImage() {
+  const brandBg = selectedBrand && images[`brand_bg_${selectedBrand}`];
+  return brandBg && brandBg.complete ? brandBg : images.virtualBg;
 }
 
 let basket = { x: 190, y: 500, width: 120, height: 120 };
@@ -437,9 +446,10 @@ function drawContained(img, x, y, boxSize) {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (images.virtualBg && images.virtualBg.complete) {
+  const bgImg = currentBackgroundImage();
+  if (bgImg && bgImg.complete) {
     ctx.globalAlpha = 0.5;
-    ctx.drawImage(images.virtualBg, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
     ctx.globalAlpha = 1.0;
   }
 

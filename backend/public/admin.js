@@ -578,6 +578,12 @@ async function loadBrands() {
         <input type="file" accept="image/*" data-img-field="scoreIconPath" title="Replace score icon" />
         <span class="thumb-label">Score icon</span>
       </div>
+      <div class="img-upload">
+        <img class="thumb" src="${resolveUrl(b.background_path)}" />
+        <input type="file" accept="image/*" data-img-field="backgroundPath" title="Replace background" />
+        <span class="thumb-label">Background${b.background_path ? "" : " (default)"}</span>
+        ${b.background_path ? `<button type="button" class="clear-bg-btn secondary" data-action="clear-background" title="Revert to the default background">Use default</button>` : ""}
+      </div>
       <div class="entity-fields">
         <input class="field-input" data-field="name" value="${escapeHtml(b.name)}" />
         <span class="key-badge">${escapeHtml(b.key)}</span>
@@ -644,11 +650,24 @@ brandsListEl.addEventListener("change", async (e) => {
 });
 
 brandsListEl.addEventListener("click", async (e) => {
-  if (e.target.dataset.action !== "delete") return;
+  const action = e.target.dataset.action;
+  if (!action) return;
   const row = e.target.closest(".entity-row");
-  if (!confirm("Delete this brand? Its items will remain but become unreachable in-game.")) return;
-  await authedFetch(`/api/admin/brands/${row.dataset.id}`, { method: "DELETE" });
-  loadBrands();
+
+  if (action === "delete") {
+    if (!confirm("Delete this brand? Its items will remain but become unreachable in-game.")) return;
+    await authedFetch(`/api/admin/brands/${row.dataset.id}`, { method: "DELETE" });
+    loadBrands();
+  }
+
+  if (action === "clear-background") {
+    await authedFetch(`/api/admin/brands/${row.dataset.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backgroundPath: null })
+    });
+    loadBrands();
+  }
 });
 
 // --- Items ---

@@ -122,7 +122,7 @@ router.get("/brands", (req, res) => {
 });
 
 router.post("/brands", (req, res) => {
-  const { key, name, logoPath, scoreIconPath, active, sortOrder } = req.body || {};
+  const { key, name, logoPath, scoreIconPath, backgroundPath, active, sortOrder } = req.body || {};
   const cleanKey = String(key || "").trim().toLowerCase().slice(0, 20);
   const cleanName = String(name || "").trim().slice(0, 60);
 
@@ -133,8 +133,18 @@ router.post("/brands", (req, res) => {
 
   try {
     const info = db
-      .prepare("INSERT INTO brands (key, name, logo_path, score_icon_path, active, sort_order) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(cleanKey, cleanName, logoPath || null, scoreIconPath || null, active === false ? 0 : 1, Number.isInteger(sortOrder) ? sortOrder : 0);
+      .prepare(
+        "INSERT INTO brands (key, name, logo_path, score_icon_path, background_path, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .run(
+        cleanKey,
+        cleanName,
+        logoPath || null,
+        scoreIconPath || null,
+        backgroundPath || null,
+        active === false ? 0 : 1,
+        Number.isInteger(sortOrder) ? sortOrder : 0
+      );
     res.status(201).json({ id: info.lastInsertRowid });
   } catch {
     res.status(409).json({ error: "A brand with that key already exists." });
@@ -145,14 +155,17 @@ router.put("/brands/:id", (req, res) => {
   const existing = db.prepare("SELECT * FROM brands WHERE id = ?").get(req.params.id);
   if (!existing) return res.status(404).json({ error: "Not found" });
 
-  const { name, logoPath, scoreIconPath, active, sortOrder } = req.body || {};
+  const { name, logoPath, scoreIconPath, backgroundPath, active, sortOrder } = req.body || {};
   const cleanName = name !== undefined ? String(name).trim().slice(0, 60) : existing.name;
   if (!cleanName) return res.status(400).json({ error: "Name is required." });
 
-  db.prepare("UPDATE brands SET name = ?, logo_path = ?, score_icon_path = ?, active = ?, sort_order = ? WHERE id = ?").run(
+  db.prepare(
+    "UPDATE brands SET name = ?, logo_path = ?, score_icon_path = ?, background_path = ?, active = ?, sort_order = ? WHERE id = ?"
+  ).run(
     cleanName,
     logoPath !== undefined ? logoPath : existing.logo_path,
     scoreIconPath !== undefined ? scoreIconPath : existing.score_icon_path,
+    backgroundPath !== undefined ? backgroundPath : existing.background_path,
     active !== undefined ? (active ? 1 : 0) : existing.active,
     Number.isInteger(sortOrder) ? sortOrder : existing.sort_order,
     req.params.id
