@@ -48,27 +48,69 @@ function loadBrandAssets(brand) {
   scoreIconEl.style.content = `url("img/${brand}/score.png")`;
 }
 
-// --- AI MODELS ---
-const hands = new Hands({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-hands.setOptions({
-  maxNumHands: 1,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.5
-});
-hands.onResults((res) => {
-  if (res.multiHandLandmarks?.length > 0) {
-    const p = res.multiHandLandmarks[0][9];
-    basket.x += ((1 - p.x) * 500 - basket.width / 2 - basket.x) * 0.4;
-    basket.y += (p.y * canvas.height - basket.height / 2 - basket.y) * 0.4;
+// --- COLOR-BLOB TRACKING (#34C4A3 rectangle via HSV) ---
+const TRACK_W = 160, TRACK_H = 120;
+const trackCanvas = document.createElement("canvas");
+trackCanvas.width = TRACK_W;
+trackCanvas.height = TRACK_H;
+const trackCtx = trackCanvas.getContext("2d", { willReadFrequently: true });
+
+function isTargetColor(r, g, b) {
+  // Convert RGB (0-255) to HSV
+  const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+  const d = max - min;
+
+  let h = 0;
+  if (d !== 0) {
+    if (max === rNorm) h = ((gNorm - bNorm) / d) % 6;
+    else if (max === gNorm) h = (bNorm - rNorm) / d + 2;
+    else h = (rNorm - gNorm) / d + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
   }
-});
+
+  const s = max === 0 ? 0 : d / max;
+  const v = max;
+
+  // Target #34C4A3 (Hue ~166°)
+  // Hue tolerance: 166° ± 18°, Saturation >= 25%, Brightness/Value >= 20%
+  const hueMatch = Math.abs(h - 166) <= 18 || Math.abs(h - 166) >= 342;
+  const satMatch = s >= 0.25;
+  const valMatch = v >= 0.20;
+
+  return hueMatch && satMatch && valMatch;
+}
+
+function trackObject() {
+  trackCtx.drawImage(videoElement, 0, 0, TRACK_W, TRACK_H);
+  const { data } = trackCtx.getImageData(0, 0, TRACK_W, TRACK_H);
+
+  let sumX = 0, sumY = 0, count = 0;
+  for (let y = 0; y < TRACK_H; y++) {
+    for (let x = 0; x < TRACK_W; x++) {
+      const i = (y * TRACK_W + x) * 4;
+      if (isTargetColor(data[i], data[i + 1], data[i + 2])) {
+        sumX += x;
+        sumY += y;
+        count++;
+      }
+    }
+  }
+
+  // Lowered threshold to 5 pixels for better sensitivity at distance
+  if (count > 5) {
+    const cx = sumX / count / TRACK_W;
+    const cy = sumY / count / TRACK_H;
+    // Increased easing factor to 0.75 for snappier response
+    basket.x += ((1 - cx) * 500 - basket.width / 2 - basket.x) * 0.75;
+    basket.y += (cy * canvas.height - basket.height / 2 - basket.y) * 0.75;
+  }
+}
 
 const camera = new Camera(videoElement, {
   onFrame: async () => {
-    await hands.send({ image: videoElement });
+    trackObject();
   },
   width: 640,
   height: 480

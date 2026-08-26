@@ -1,10 +1,10 @@
 # AR Fruit Catcher
 
-A single-page browser game. Move an on-screen basket by moving your hand in front of the webcam (tracked via MediaPipe Hands), catch falling fruit for points, and avoid bombs.
+A single-page browser game. Move an on-screen basket by moving a `#34C4A3`-colored rectangle in front of the webcam (tracked via color detection), catch falling fruit for points, and avoid bombs.
 
 ## Features
 
-- Real-time hand tracking via webcam — no keyboard/mouse controls
+- Real-time color-object tracking via webcam — no keyboard/mouse controls
 - 60-second timed rounds with ramping difficulty (fruit falls faster and bombs appear more often as time runs out)
 - Score popups, beep sound effects (synthesized with the Web Audio API — no audio files), and a 3-2-1-GO countdown
 - Local top-5 leaderboard (saved in the browser via `localStorage`)
@@ -21,21 +21,17 @@ Then visit `http://localhost:8000/index.html` and grant camera permission when p
 
 ## Controls
 
-Hold your hand up in front of the webcam — the basket follows your palm position. Catch fruit (apple, banana, strawberry, grape) for +10 points; avoid bombs, which cost -20 points.
+Hold up a `#34C4A3`-colored rectangle in front of the webcam — the basket follows it. Catch fruit (apple, banana, strawberry, grape) for +10 points; avoid bombs, which cost -20 points.
 
 ## Tech stack
 
 - Vanilla HTML/CSS/JS, no frameworks or dependencies
-- [MediaPipe Hands](https://developers.google.com/mediapipe) (via CDN) for hand landmark tracking
+- [MediaPipe camera_utils](https://developers.google.com/mediapipe) (via CDN) for webcam frame capture
+- Plain RGB color-distance thresholding (no ML model) for object tracking
 - HTML5 Canvas for rendering
 - Web Audio API for sound effects
 - `localStorage` for leaderboard persistence
 
 ## Development notes
 
-During development, a few alternate approaches to the input method were explored on top of the original MediaPipe hand-tracking implementation:
-
-- **Color-blob object tracking**: replacing hand-landmark tracking with plain RGB/HSV pixel thresholding on downscaled webcam frames, to control the basket by moving a colored physical object instead of a hand. This was prototyped for a dark green box and then a black square.
-- **Live camera preview**: showing the raw (mirrored) webcam feed in a small window in the top-left corner of the screen, to make it easier to see what the tracker sees while tuning detection thresholds.
-
-These were exploratory changes made and then reverted during development discussions — [script.js](script.js) in this repo uses the original MediaPipe Hands landmark tracking (see [CLAUDE.md](CLAUDE.md) for the current architecture breakdown). The color-blob tracking approach remains a viable path if hand tracking is ever swapped out for a physical prop/marker-based control scheme.
+The input method went through a few iterations: it started as MediaPipe hand-landmark tracking, was prototyped with color-blob tracking for a dark green box and then a black square, and now tracks a specific `#34C4A3`-colored rectangle via RGB color-distance thresholding (see [script.js](script.js)'s `isTargetColor`/`TARGET_COLOR`/`COLOR_DISTANCE`, and [CLAUDE.md](CLAUDE.md) for the current architecture breakdown). The color-distance approach can be repointed at a different color by changing `TARGET_COLOR`, and the matching tolerance tuned via `COLOR_DISTANCE`.
