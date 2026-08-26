@@ -227,12 +227,6 @@ h1 {
   margin-bottom: 5px;
 }
 
-.icon-trophy {
-  content: url("img/trophy.png");
-  width: 35px;
-  vertical-align: middle;
-}
-
 button {
   padding: 14px 45px;
   font-size: 20px;
@@ -271,19 +265,4 @@ button:hover {
   font-size: 48px;
   font-weight: 900;
   line-height: 1.1;
-}
-
-.leaderboard {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
-  border-radius: 15px;
-  width: 85%;
-  margin: 25px 0;
-}
-
-.score-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }

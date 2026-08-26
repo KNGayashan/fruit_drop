@@ -294,24 +294,17 @@ function drawPersonLayer() {
 }
 
 // --- HELPERS ---
-async function getScores() {
+// Every play session is recorded server-side for admin analytics, but there's
+// no player-facing leaderboard — no name prompt, no "did you qualify" check.
+// The play timestamp is used as the record's name instead of asking the player.
+async function submitScore(points) {
   try {
-    const res = await fetch(`${API_BASE}/api/scores/top?limit=${CONFIG.leaderboardSize}`);
-    if (!res.ok) throw new Error("bad response");
-    return await res.json();
-  } catch (err) {
-    console.error("Leaderboard fetch failed:", err);
-    return [];
-  }
-}
-
-async function submitScore(name, points) {
-  try {
+    const playedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
     await fetch(`${API_BASE}/api/scores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
+        name: playedAt,
         score: points,
         brand: selectedBrand,
         screenWidth: window.screen.width,
@@ -322,19 +315,6 @@ async function submitScore(name, points) {
   } catch (err) {
     console.error("Score submit failed:", err);
   }
-}
-
-async function updateUI() {
-  const leaderboardList = document.getElementById("leaderboard-list");
-  if (!leaderboardList) return;
-  const scores = await getScores();
-  leaderboardList.innerHTML =
-    scores
-      .map(
-        (s) =>
-          `<div class="score-row"><span>${escapeHtml(s.name)}</span><span>${s.score}</span></div>`
-      )
-      .join("") || "No missions completed";
 }
 
 function playBeep(f, d) {
@@ -494,26 +474,11 @@ function initGame() {
               <label>Total Score</label>
               <span>${score}</span>
             </div>
-            <div class="leaderboard">
-              <h3><img class="icon-trophy" /> TOP ${CONFIG.leaderboardSize} RECORDS</h3>
-              <div id="leaderboard-list"></div>
-            </div>
             <img src="${resolveAssetUrl(CONFIG.assets.playAgain)}" alt="Play Again" class="start-btn" onclick="showStartScreen()">
         `;
       overlay.style.display = "flex";
 
-      (async () => {
-        const scores = await getScores();
-        if (scores.length < CONFIG.leaderboardSize || score > scores[scores.length - 1].score) {
-          setTimeout(async () => {
-            const name = prompt("TOP SCORE! Name:") || "Player";
-            await submitScore(name, score);
-            updateUI();
-          }, 500);
-        } else {
-          updateUI();
-        }
-      })();
+      submitScore(score);
     }
   }, 1000);
 }
