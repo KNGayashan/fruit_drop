@@ -15,22 +15,34 @@
 
 <body>
   <div id="game-wrapper">
-    <video id="input_video" autoplay playsinline></video>
-    <div id="countdown"></div>
+    <div id="game-frame"></div>
+    <div id="game-badge" hidden><img id="badgeLogo" alt="" /></div>
 
-    <div class="stats">
-      <span><img id="scoreIcon" class="icon-score" /> <span id="score">0</span></span>
-      <span><img class="icon-timer" /> <span id="timer">60</span>s</span>
+    <div id="game-inner">
+      <video id="input_video" autoplay playsinline></video>
+      <div id="countdown"></div>
+
+      <div class="stats">
+        <div class="stat-box stat-box--score">
+          <img id="scoreIcon" class="stat-icon" alt="" />
+          <span id="score">0</span>
+          <label>Points</label>
+        </div>
+        <div class="stat-box stat-box--timer">
+          <span id="timer">60</span>
+          <label>Timer</label>
+        </div>
+      </div>
+
+      <div id="overlay">
+        <img src="img/logo.png" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
+        <img src="img/btn.png" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
+      </div>
+
+      <div id="brandSelect"></div>
+
+      <canvas id="gameCanvas"></canvas>
     </div>
-
-    <div id="overlay">
-      <img src="img/logo.png" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
-      <img src="img/btn.png" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
-    </div>
-
-    <div id="brandSelect"></div>
-
-    <canvas id="gameCanvas"></canvas>
   </div>
 
   <script src="script.js"></script>

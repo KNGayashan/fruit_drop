@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 body,
 html {
   margin: 0;
@@ -14,14 +16,53 @@ html {
 
 #game-wrapper {
   position: relative;
-  width: 512px;
-  height: 640px;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
-  border-radius: 28px;
+}
+
+/* Decorative rolling-hill style frame around the whole game area, always on
+   top and non-interactive, so it stays visible through every screen
+   (start/brand-select/gameplay/end) without each of them needing to know
+   about it. */
+#game-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  border: 20px solid #3fae4a;
   box-shadow:
-    0 30px 70px -20px rgba(0, 0, 0, 0.3),
-    0 0 0 10px #14181f,
-    0 0 0 11px rgba(0, 0, 0, 0.08);
+    inset 0 0 0 3px rgba(255, 255, 255, 0.35),
+    inset 0 0 0 20px rgba(0, 0, 0, 0.12);
+}
+
+#game-inner {
+  position: absolute;
+  inset: 20px;
+  overflow: hidden;
+}
+
+#game-badge {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35), 0 0 0 4px #3fae4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#game-badge img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
 }
 
 #input_video {
@@ -55,35 +96,48 @@ canvas {
 
 .stats {
   position: absolute;
-  top: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 30px;
+  top: 14px;
+  left: 14px;
+  right: 14px;
   z-index: 15;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 10px 25px;
-  border-radius: 50px;
-  color: #fff;
-  font-weight: bold;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.stats span {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
+  justify-content: space-between;
+  pointer-events: none;
 }
 
-.icon-score {
+.stat-box {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 6px 16px 8px;
+  text-align: center;
+  color: #fff;
+  min-width: 58px;
+}
+
+.stat-box span {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.stat-box label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.stat-icon {
   content: url("img/apple.png");
-  width: 24px;
-}
-
-.icon-timer {
-  content: url("img/hourglass.png");
-  width: 24px;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  margin: 0 auto 2px;
+  display: block;
 }
 
 #overlay {
@@ -195,6 +249,28 @@ button {
 button:hover {
   background: #fff;
   transform: scale(1.05);
+}
+
+.total-score {
+  background: #3fae4a;
+  border-radius: 18px;
+  padding: 12px 30px 16px;
+  margin: 10px 0;
+}
+
+.total-score label {
+  display: block;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+.total-score span {
+  display: block;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 .leaderboard {

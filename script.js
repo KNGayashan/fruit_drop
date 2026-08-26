@@ -7,6 +7,8 @@ const countdownEl = document.getElementById("countdown");
 const scoreEl = document.getElementById("score");
 const scoreIconEl = document.getElementById("scoreIcon");
 const timerEl = document.getElementById("timer");
+const gameBadgeEl = document.getElementById("game-badge");
+const badgeLogoEl = document.getElementById("badgeLogo");
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -236,9 +238,59 @@ function trackObject() {
     const cx = sumX / count / w;
     const cy = sumY / count / h;
     const easing = CONFIG.trackingEasing;
-    basket.x += ((1 - cx) * CONFIG.canvasWidth - basket.width / 2 - basket.x) * easing;
+    basket.x += ((1 - cx) * canvas.width - basket.width / 2 - basket.x) * easing;
     basket.y += (cy * canvas.height - basket.height / 2 - basket.y) * easing;
   }
+}
+
+// --- LIVE PLAYER OVERLAY (background-removed via MediaPipe selfie segmentation) ---
+const personCanvas = document.createElement("canvas");
+const personCtx = personCanvas.getContext("2d");
+let personReady = false;
+let selfieSegmentation = null;
+
+function onSegmentationResults(results) {
+  personCanvas.width = results.image.width;
+  personCanvas.height = results.image.height;
+  personCtx.clearRect(0, 0, personCanvas.width, personCanvas.height);
+  personCtx.drawImage(results.segmentationMask, 0, 0, personCanvas.width, personCanvas.height);
+  personCtx.globalCompositeOperation = "source-in";
+  personCtx.drawImage(results.image, 0, 0, personCanvas.width, personCanvas.height);
+  personCtx.globalCompositeOperation = "source-over";
+  personReady = true;
+}
+
+// Best-effort: if the segmentation model fails to load (offline CDN, older
+// browser, etc.) the game still works fine, it just won't show the player.
+function setupSegmentation() {
+  try {
+    selfieSegmentation = new SelfieSegmentation({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+    });
+    selfieSegmentation.setOptions({ modelSelection: 1 });
+    selfieSegmentation.onResults(onSegmentationResults);
+  } catch (err) {
+    console.error("Selfie segmentation unavailable, player won't be shown:", err);
+    selfieSegmentation = null;
+  }
+}
+
+// Draws the cut-out player, mirrored (so it behaves like a mirror, matching
+// the tracking's own left/right flip) and "cover"-fit to the canvas.
+function drawPersonLayer() {
+  if (!personReady || personCanvas.width === 0) return;
+
+  const scale = Math.max(canvas.width / personCanvas.width, canvas.height / personCanvas.height);
+  const drawW = personCanvas.width * scale;
+  const drawH = personCanvas.height * scale;
+  const dx = (canvas.width - drawW) / 2;
+  const dy = (canvas.height - drawH) / 2;
+
+  ctx.save();
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(personCanvas, dx, dy, drawW, drawH);
+  ctx.restore();
 }
 
 // --- HELPERS ---
@@ -297,8 +349,32 @@ function playBeep(f, d) {
   o.stop(audioCtx.currentTime + d);
 }
 
-function spawnFloatingText(x, y, text, color) {
-  floatingTexts.push({ x, y, text, color, life: 1.0 });
+function spawnFloatingText(x, y, text, color, splat) {
+  floatingTexts.push({ x, y, text, color, splat: !!splat, life: 1.0 });
+}
+
+// Jagged "impact" burst behind penalty text, matching the reference product's
+// splat-style hit feedback instead of plain floating text.
+function drawSplat(x, y, life) {
+  const spikes = 10;
+  const outerR = 32;
+  const innerR = 15;
+  ctx.save();
+  ctx.globalAlpha = life;
+  ctx.translate(x, y - 8);
+  ctx.beginPath();
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (Math.PI / spikes) * i;
+    const px = Math.cos(angle) * r;
+    const py = Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fill();
+  ctx.restore();
 }
 
 // --- DYNAMIC DIFFICULTY SPAWNING ---
@@ -332,6 +408,7 @@ function spawnItem() {
 }
 
 function showStartScreen() {
+  gameBadgeEl.hidden = true;
   overlay.innerHTML = `
         <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
         <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
@@ -363,6 +440,10 @@ function selectBrand(brand) {
   selectedBrand = brand;
   const b = BRANDS.find((x) => x.key === brand);
   if (b && b.scoreIconPath) scoreIconEl.style.content = `url("${resolveAssetUrl(b.scoreIconPath)}")`;
+  if (b && b.logoPath) {
+    badgeLogoEl.src = resolveAssetUrl(b.logoPath);
+    gameBadgeEl.hidden = false;
+  }
   brandSelect.style.display = "none";
   startGame();
 }
@@ -409,6 +490,10 @@ function initGame() {
 
       overlay.innerHTML = `
             <img src="${resolveAssetUrl(CONFIG.assets.timeUp)}" alt="Time's Up" class="logo">
+            <div class="total-score">
+              <label>Total Score</label>
+              <span>${score}</span>
+            </div>
             <div class="leaderboard">
               <h3><img class="icon-trophy" /> TOP ${CONFIG.leaderboardSize} RECORDS</h3>
               <div id="leaderboard-list"></div>
@@ -453,6 +538,8 @@ function draw() {
     ctx.globalAlpha = 1.0;
   }
 
+  drawPersonLayer();
+
   if (gameActive) {
     if (images.basket && images.basket.complete)
       ctx.drawImage(images.basket, basket.x, basket.y, basket.width, basket.height);
@@ -470,7 +557,7 @@ function draw() {
       ) {
         score = Math.max(0, score + item.points);
         const sign = item.points >= 0 ? "+" : "";
-        spawnFloatingText(item.x, item.y, `${sign}${item.points}`, item.points >= 0 ? "#f1c40f" : "#ff4757");
+        spawnFloatingText(item.x, item.y, `${sign}${item.points}`, item.points >= 0 ? "#f1c40f" : "#ffffff", item.points < 0);
         playBeep(
           item.points >= 0 ? CONFIG.audio.catchBeepFreq : CONFIG.audio.hitBeepFreq,
           item.points >= 0 ? CONFIG.audio.beepShortDurationSec : CONFIG.audio.beepLongDurationSec
@@ -483,10 +570,18 @@ function draw() {
     });
 
     floatingTexts.forEach((ft, i) => {
+      if (ft.splat) drawSplat(ft.x, ft.y, ft.life);
+
       ctx.fillStyle = ft.color;
       ctx.globalAlpha = ft.life;
       ctx.font = "bold 24px Arial";
-      ctx.fillText(ft.text, ft.x, ft.y);
+      if (ft.splat) {
+        ctx.textAlign = "center";
+        ctx.fillText(ft.text, ft.x, ft.y - 4);
+        ctx.textAlign = "left";
+      } else {
+        ctx.fillText(ft.text, ft.x, ft.y);
+      }
 
       ft.y -= 1.5;
       ft.life -= 0.02;
@@ -504,18 +599,15 @@ async function init() {
   await loadRemoteConfig();
   TARGET_HUE = hexToHue(CONFIG.targetColor);
 
-  // The canvas's on-screen CSS box size (#game-wrapper is fixed at 512x640) is
-  // independent of its internal drawing resolution set here. Using window.innerHeight
-  // for canvas.height made the two mismatch on any window that isn't exactly 640px
-  // tall (i.e. almost always), so the browser stretched X and Y by different
-  // factors when scaling the canvas bitmap into its CSS box — visibly squashing
-  // everything drawn on it (basket, items, background). Deriving canvas.height
-  // from the canvas's actual CSS aspect ratio keeps both scale factors equal.
-  canvas.width = CONFIG.canvasWidth;
+  // The game now fills the viewport (#game-wrapper is 100vw x 100vh), so the
+  // canvas's internal drawing resolution is set to match its actual on-screen
+  // CSS pixel size directly — this keeps rendering crisp at any window size
+  // and keeps X/Y scale factors equal (a fixed buffer size stretched into a
+  // differently-shaped box would squash everything drawn on it, same failure
+  // mode as the old window.innerHeight bug this replaced).
   const canvasRect = canvas.getBoundingClientRect();
-  canvas.height = canvasRect.width > 0
-    ? Math.round(CONFIG.canvasWidth * (canvasRect.height / canvasRect.width))
-    : window.innerHeight;
+  canvas.width = canvasRect.width > 0 ? Math.round(canvasRect.width) : CONFIG.canvasWidth;
+  canvas.height = canvasRect.height > 0 ? Math.round(canvasRect.height) : window.innerHeight;
   basket = { x: CONFIG.basketStartX, y: CONFIG.basketStartY, width: CONFIG.basketWidth, height: CONFIG.basketHeight };
 
   trackCanvas = document.createElement("canvas");
@@ -526,10 +618,12 @@ async function init() {
   loadAssets();
   renderBrandSelect();
   showStartScreen();
+  setupSegmentation();
 
   const camera = new Camera(videoElement, {
     onFrame: async () => {
       trackObject();
+      if (selfieSegmentation) await selfieSegmentation.send({ image: videoElement });
     },
     width: CONFIG.cameraWidth,
     height: CONFIG.cameraHeight
