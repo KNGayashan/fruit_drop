@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-page, single-file browser game: "AR Fruit Catcher". The player moves an on-screen basket by moving their hand in front of the webcam (tracked via MediaPipe Hands), catching falling fruit for points and avoiding bombs. There is no build system, no package manager, and no server-side code — everything (HTML, CSS, JS) lives in [index.html](index.html).
+A single-page browser game: "AR Fruit Catcher". The player moves an on-screen basket by moving their hand in front of the webcam (tracked via MediaPipe Hands), catching falling fruit for points and avoiding bombs. There is no build system, no package manager, and no server-side code — markup lives in [index.html](index.html), styles in [styles.css](styles.css), and all game logic in [script.js](script.js).
 
 ## Running the game
 
@@ -20,9 +20,9 @@ There are no automated tests, linters, or build steps to run.
 
 ## Architecture
 
-Everything is in [index.html](index.html): markup, CSS, and a single inline `<script>` containing all game logic. There's no module system — all functions and state are global.
+[index.html](index.html) is a thin shell that links [styles.css](styles.css) and loads [script.js](script.js) (plus the MediaPipe CDN scripts) at the bottom of `<body>`. There's no module system — all functions and state in `script.js` are global.
 
-Key pieces, in the order they appear in the script:
+Key pieces, in the order they appear in [script.js](script.js):
 
 - **Asset loading**: `images` is a plain object populated via `loadImg(name, src)`; draw calls always guard on `img.complete` since loads are async and unawaited.
 - **Hand tracking pipeline**: MediaPipe `Hands` (loaded from a CDN, see the `<script>` tags in `<head>`) processes webcam frames pushed by a MediaPipe `Camera` instance. `hands.onResults(...)` reads landmark 9 (middle of the palm) and smoothly lerps `basket.x`/`basket.y` toward it every frame — this is the only input method (no keyboard/mouse basket control).
