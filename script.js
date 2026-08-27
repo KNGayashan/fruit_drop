@@ -718,7 +718,7 @@ async function init() {
   const canvasRect = canvas.getBoundingClientRect();
   canvas.width = canvasRect.width > 0 ? Math.round(canvasRect.width) : CONFIG.canvasWidth;
   canvas.height = canvasRect.height > 0 ? Math.round(canvasRect.height) : window.innerHeight;
-  sizeScale = Math.max(0.6, Math.min(2.4, canvas.width / SIZE_REFERENCE_WIDTH));
+  sizeScale = Math.max(0.6, Math.min(1.6, canvas.width / SIZE_REFERENCE_WIDTH));
   basket = {
     x: CONFIG.basketStartX,
     y: CONFIG.basketStartY,
