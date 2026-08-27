@@ -171,6 +171,7 @@ function currentBackgroundImage() {
 
 let basket = { x: 190, y: 500, width: 120, height: 120 };
 let basketSquash = 0; // 0..1, decays each frame — brief squash/stretch feedback on catch
+let comboStreak = 0; // consecutive good catches; resets on a bad catch
 let score = 0,
   timeLeft = 60,
   gameActive = false,
@@ -183,11 +184,13 @@ let selectedBrand = null;
 const DEFAULT_THEME_PRIMARY = "#2f9e44";
 const DEFAULT_THEME_SECONDARY = "#ffd43b";
 let currentThemeColor = DEFAULT_THEME_PRIMARY;
+let currentThemeSecondary = DEFAULT_THEME_SECONDARY;
 
 function applyBrandTheme(primary, secondary) {
   document.documentElement.style.setProperty("--brand-primary", primary);
   document.documentElement.style.setProperty("--brand-secondary", secondary);
   currentThemeColor = primary;
+  currentThemeSecondary = secondary;
 }
 
 function resetTheme() {
@@ -360,6 +363,12 @@ function spawnFloatingText(x, y, text, color, splat) {
   floatingTexts.push({ x, y, text, color, splat: !!splat, life: 1.0 });
 }
 
+const COMBO_THRESHOLD = 3;
+
+function spawnComboPopup(x, y, streak) {
+  floatingTexts.push({ x, y, text: `COMBO x${streak}!`, color: "#ffffff", combo: true, life: 1.0 });
+}
+
 // Jagged "impact" burst behind penalty text, matching the reference product's
 // splat-style hit feedback instead of plain floating text.
 function drawSplat(x, y, life) {
@@ -492,6 +501,7 @@ function initGame() {
   timeLeft = CONFIG.roundDurationSec;
   items = [];
   floatingTexts = [];
+  comboStreak = 0;
   countdownActive = false;
   gameActive = true;
   scoreEl.innerText = score;
@@ -532,13 +542,66 @@ function drawContained(img, x, y, boxSize) {
   ctx.drawImage(img, x + (boxSize - drawW) / 2, y + (boxSize - drawH) / 2, drawW, drawH);
 }
 
+// Draws img scaled to fully cover the (x, y, w, h) box at its real aspect
+// ratio, cropping any overflow ("cover" fit, like CSS background-size:cover)
+// instead of stretching it to fill the box and distorting it.
+function drawCover(img, x, y, w, h) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const drawW = img.naturalWidth * scale;
+  const drawH = img.naturalHeight * scale;
+  ctx.drawImage(img, x + (w - drawW) / 2, y + (h - drawH) / 2, drawW, drawH);
+}
+
+// Soft sun glow + three layered rolling-hill silhouettes (back/mid/front,
+// increasing opacity toward the front) for depth, tinted to the current
+// brand theme. Sits behind the per-brand background image/pattern.
+function drawHillLayer(heightFrac, color, alpha) {
+  const h = canvas.height * heightFrac;
+  const baseY = canvas.height - h * 0.5;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height);
+  ctx.lineTo(0, baseY);
+  const segments = 3;
+  const segW = canvas.width / segments;
+  for (let i = 0; i < segments; i++) {
+    const cpX = segW * i + segW / 2;
+    const cpY = baseY - h * (i % 2 === 0 ? 0.5 : 0.15);
+    const endX = segW * (i + 1);
+    ctx.quadraticCurveTo(cpX, cpY, endX, baseY);
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSkyBackdrop() {
+  const sunX = canvas.width * 0.85;
+  const sunY = canvas.height * 0.05;
+  const sunR = canvas.width * 0.5;
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR);
+  sunGrad.addColorStop(0, "rgba(255, 249, 219, 0.55)");
+  sunGrad.addColorStop(1, "rgba(255, 249, 219, 0)");
+  ctx.fillStyle = sunGrad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawHillLayer(0.4, currentThemeSecondary, 0.3);
+  drawHillLayer(0.28, currentThemeSecondary, 0.45);
+  drawHillLayer(0.16, currentThemeColor, 0.6);
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawSkyBackdrop();
 
   const bgImg = currentBackgroundImage();
   if (bgImg && bgImg.complete) {
     ctx.globalAlpha = 0.5;
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+    drawCover(bgImg, 0, 0, canvas.width, canvas.height);
     ctx.globalAlpha = 1.0;
   }
 
@@ -582,6 +645,13 @@ function draw() {
         scoreEl.innerText = score;
         replayAnimation(scoreEl.closest(".stat-medal"), "pulse");
         basketSquash = 1;
+
+        if (item.points >= 0) {
+          comboStreak++;
+          if (comboStreak >= COMBO_THRESHOLD) spawnComboPopup(item.x + item.size / 2, item.y - 30, comboStreak);
+        } else {
+          comboStreak = 0;
+        }
         if (item.points < 0) replayAnimation(gameWrapper, "shake-screen");
         items.splice(i, 1);
       }
@@ -591,20 +661,31 @@ function draw() {
 
     floatingTexts.forEach((ft, i) => {
       if (ft.splat) drawSplat(ft.x, ft.y, ft.life);
-
-      ctx.fillStyle = ft.color;
       ctx.globalAlpha = ft.life;
-      ctx.font = "bold 24px Arial";
-      if (ft.splat) {
+
+      if (ft.combo) {
+        ctx.textAlign = "center";
+        ctx.font = "bold 30px Arial";
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = currentThemeColor;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.textAlign = "left";
+      } else if (ft.splat) {
+        ctx.fillStyle = ft.color;
+        ctx.font = "bold 24px Arial";
         ctx.textAlign = "center";
         ctx.fillText(ft.text, ft.x, ft.y - 4);
         ctx.textAlign = "left";
       } else {
+        ctx.fillStyle = ft.color;
+        ctx.font = "bold 24px Arial";
         ctx.fillText(ft.text, ft.x, ft.y);
       }
 
-      ft.y -= 1.5;
-      ft.life -= 0.02;
+      ft.y -= ft.combo ? 1.0 : 1.5;
+      ft.life -= ft.combo ? 0.012 : 0.02;
 
       if (ft.life <= 0) floatingTexts.splice(i, 1);
     });
