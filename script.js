@@ -172,6 +172,14 @@ function currentBackgroundImage() {
 let basket = { x: 190, y: 500, width: 120, height: 120 };
 let basketSquash = 0; // 0..1, decays each frame — brief squash/stretch feedback on catch
 let comboStreak = 0; // consecutive good catches; resets on a bad catch
+
+// Item/basket sizes are tuned in CONFIG against a 500px-wide reference canvas.
+// Since the canvas now matches the real screen's resolution (could be a small
+// phone or a large kiosk display), sizes are scaled by this factor so items
+// stay proportional to the actual screen instead of looking tiny on big
+// displays or oversized on small ones. Clamped to keep either extreme sane.
+const SIZE_REFERENCE_WIDTH = 500;
+let sizeScale = 1;
 let score = 0,
   timeLeft = 60,
   gameActive = false,
@@ -406,13 +414,14 @@ function spawnItem() {
 
   if (pool.length) {
     const chosen = pickWeighted(pool);
+    const size = CONFIG.itemSize * sizeScale;
     items.push({
-      x: Math.random() * (canvas.width - CONFIG.itemSize),
-      y: -CONFIG.itemSize,
+      x: Math.random() * (canvas.width - size),
+      y: -size,
       itemKey: chosen.key,
       points: chosen.points,
       speed: (CONFIG.itemSpeedMin + Math.random() * CONFIG.itemSpeedRandomAdd) * (1 + difficulty),
-      size: CONFIG.itemSize
+      size
     });
   }
 
@@ -709,7 +718,13 @@ async function init() {
   const canvasRect = canvas.getBoundingClientRect();
   canvas.width = canvasRect.width > 0 ? Math.round(canvasRect.width) : CONFIG.canvasWidth;
   canvas.height = canvasRect.height > 0 ? Math.round(canvasRect.height) : window.innerHeight;
-  basket = { x: CONFIG.basketStartX, y: CONFIG.basketStartY, width: CONFIG.basketWidth, height: CONFIG.basketHeight };
+  sizeScale = Math.max(0.6, Math.min(2.4, canvas.width / SIZE_REFERENCE_WIDTH));
+  basket = {
+    x: CONFIG.basketStartX,
+    y: CONFIG.basketStartY,
+    width: CONFIG.basketWidth * sizeScale,
+    height: CONFIG.basketHeight * sizeScale
+  };
 
   trackCanvas = document.createElement("canvas");
   trackCanvas.width = CONFIG.trackingCanvasWidth;
