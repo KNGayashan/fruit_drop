@@ -10,6 +10,7 @@ const timerEl = document.getElementById("timer");
 const gameBadgeEl = document.getElementById("game-badge");
 const badgeLogoEl = document.getElementById("badgeLogo");
 const statsHudEl = document.getElementById("statsHud");
+const gameWrapper = document.getElementById("game-wrapper");
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -169,6 +170,7 @@ function currentBackgroundImage() {
 }
 
 let basket = { x: 190, y: 500, width: 120, height: 120 };
+let basketSquash = 0; // 0..1, decays each frame — brief squash/stretch feedback on catch
 let score = 0,
   timeLeft = 60,
   gameActive = false,
@@ -334,6 +336,14 @@ async function submitScore(points) {
   }
 }
 
+// Restarts a CSS animation on repeated triggers (e.g. every catch), since just
+// re-adding a class that's already present doesn't replay its animation.
+function replayAnimation(el, className) {
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
+}
+
 function playBeep(f, d) {
   if (audioCtx.state === "suspended") audioCtx.resume();
   const o = audioCtx.createOscillator();
@@ -422,8 +432,8 @@ function renderBrandSelect() {
     <div class="section-sub">Each brand brings its own challenge</div>
     <div class="brand-grid">
       ${BRANDS.map(
-        (b) =>
-          `<img src="${resolveAssetUrl(b.logoPath)}" alt="${escapeHtml(b.name)}" class="brand-logo" data-brand="${escapeHtml(b.key)}">`
+        (b, i) =>
+          `<img src="${resolveAssetUrl(b.logoPath)}" alt="${escapeHtml(b.name)}" class="brand-logo" data-brand="${escapeHtml(b.key)}" style="animation-delay:${0.24 + i * 0.08}s">`
       ).join("")}
     </div>
   `;
@@ -457,14 +467,17 @@ function startGame() {
   let count = CONFIG.countdownSec;
   countdownEl.style.display = "block";
   countdownEl.innerText = count;
+  replayAnimation(countdownEl, "punch");
   playBeep(CONFIG.audio.countdownBeepFreq, CONFIG.audio.beepShortDurationSec);
   const ci = setInterval(() => {
     count--;
     if (count > 0) {
       countdownEl.innerText = count;
+      replayAnimation(countdownEl, "punch");
       playBeep(CONFIG.audio.countdownBeepFreq, CONFIG.audio.beepShortDurationSec);
     } else if (count === 0) {
       countdownEl.innerText = "GO!";
+      replayAnimation(countdownEl, "punch");
       playBeep(CONFIG.audio.goBeepFreq, CONFIG.audio.beepLongDurationSec);
     } else {
       clearInterval(ci);
@@ -489,6 +502,7 @@ function initGame() {
     if (timeLeft > 0) {
       timeLeft--;
       timerEl.innerText = timeLeft;
+      if (timeLeft <= 10) replayAnimation(timerEl.closest(".stat-medal"), "pulse");
     } else {
       gameActive = false;
       clearInterval(ti);
@@ -533,8 +547,19 @@ function draw() {
   if (gameActive || countdownActive) drawPersonLayer();
 
   if (gameActive) {
-    if (images.basket && images.basket.complete)
-      ctx.drawImage(images.basket, basket.x, basket.y, basket.width, basket.height);
+    if (images.basket && images.basket.complete) {
+      const squashY = 1 - basketSquash * 0.22;
+      const squashW = basket.width * (1 + basketSquash * 0.12);
+      const squashH = basket.height * squashY;
+      ctx.drawImage(
+        images.basket,
+        basket.x - (squashW - basket.width) / 2,
+        basket.y + (basket.height - squashH),
+        squashW,
+        squashH
+      );
+      basketSquash = Math.max(0, basketSquash - 0.08);
+    }
 
     items.forEach((item, i) => {
       item.y += item.speed;
@@ -555,6 +580,9 @@ function draw() {
           item.points >= 0 ? CONFIG.audio.beepShortDurationSec : CONFIG.audio.beepLongDurationSec
         );
         scoreEl.innerText = score;
+        replayAnimation(scoreEl.closest(".stat-medal"), "pulse");
+        basketSquash = 1;
+        if (item.points < 0) replayAnimation(gameWrapper, "shake-screen");
         items.splice(i, 1);
       }
 

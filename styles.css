@@ -7,6 +7,42 @@
 
 * { box-sizing: border-box; }
 
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.7) translateY(20px); }
+  60% { opacity: 1; transform: scale(1.05) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.3); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.15); }
+  70% { transform: translateX(-50%) scale(0.92); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shakeScreen {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(9px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+@keyframes countPunch {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; }
+  60% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.pulse { animation: pulse 0.3s ease; }
+.shake-screen { animation: shakeScreen 0.4s ease; }
+
 body,
 html {
   margin: 0;
@@ -42,13 +78,6 @@ html {
 .hill-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hill-fill { fill: var(--brand-primary); transition: fill 0.5s ease; }
 
-.cloud {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 100px;
-  z-index: 41;
-}
-
 #game-inner {
   position: absolute;
   inset: 0;
@@ -72,6 +101,7 @@ html {
   justify-content: center;
   overflow: hidden;
   transition: border-color 0.5s ease;
+  animation: bounceIn 0.5s ease;
 }
 
 #game-badge img {
@@ -109,6 +139,8 @@ canvas {
   display: none;
   text-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 6px 0 rgba(0, 0, 0, 0.25);
 }
+
+#countdown.punch { animation: countPunch 0.5s ease; }
 
 .stats {
   position: absolute;
@@ -179,6 +211,13 @@ canvas {
   box-sizing: border-box;
 }
 
+#overlay > * {
+  animation: popIn 0.45s ease both;
+}
+#overlay > *:nth-child(1) { animation-delay: 0s; }
+#overlay > *:nth-child(2) { animation-delay: 0.1s; }
+#overlay > *:nth-child(3) { animation-delay: 0.2s; }
+
 #overlay img.logo {
   width: 60%;
   max-width: 300px;
@@ -189,11 +228,15 @@ canvas {
   width: 50%;
   max-width: 250px;
   cursor: pointer;
-  transition: transform 0.3s;
+  transition: transform 0.15s;
 }
 
 #overlay img.start-btn:hover {
   transform: scale(1.05);
+}
+
+#overlay img.start-btn:active {
+  transform: scale(0.94);
 }
 
 #brandSelect {
@@ -213,6 +256,14 @@ canvas {
   padding: 20px;
   box-sizing: border-box;
 }
+
+#brandSelect h2,
+#brandSelect .section-sub,
+#brandSelect .brand-grid {
+  animation: popIn 0.45s ease both;
+}
+#brandSelect .section-sub { animation-delay: 0.08s; }
+#brandSelect .brand-grid { animation-delay: 0.16s; }
 
 #brandSelect h2 {
   font-family: "Baloo 2", sans-serif;
@@ -244,15 +295,20 @@ canvas {
   background: #fff;
   border-radius: 22px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.15s;
   box-shadow: 0 10px 0 rgba(0, 0, 0, 0.15);
   border: 4px solid rgba(255, 255, 255, 0.6);
   height: 110px;
   object-fit: contain;
+  animation: popIn 0.4s ease both;
 }
 
 .brand-logo:hover {
   transform: scale(1.05);
+}
+
+.brand-logo:active {
+  transform: scale(0.95);
 }
 
 h1 {
@@ -281,6 +337,10 @@ button {
 
 button:hover {
   transform: scale(1.05);
+}
+
+button:active {
+  transform: scale(0.94);
 }
 
 .total-score {
