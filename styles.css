@@ -147,7 +147,13 @@ canvas {
   top: 5%;
   left: 3%;
   right: 3%;
-  z-index: 15;
+  /* Above #game-frame (40): the hill frame's wavy band grows taller, as a
+     share of viewport height, on narrow/tall aspect ratios (mobile portrait,
+     tall desktop windows) since the SVG stretches non-uniformly — a fixed
+     z-index below it let the frame visually clip the timer/points cards on
+     those screens. Sitting above it means the cards are always fully
+     visible no matter the aspect ratio. */
+  z-index: 46;
   display: flex;
   justify-content: space-between;
   pointer-events: none;
