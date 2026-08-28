@@ -209,7 +209,12 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.72);
+  background-color: var(--overlay-color, #e44c9b);
+  background-image: url("img/background.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: soft-light;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -219,19 +224,100 @@ canvas {
   text-align: center;
   padding: 20px;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 #overlay > * {
+  flex-shrink: 0;
   animation: popIn 0.45s ease both;
 }
 #overlay > *:nth-child(1) { animation-delay: 0s; }
 #overlay > *:nth-child(2) { animation-delay: 0.1s; }
 #overlay > *:nth-child(3) { animation-delay: 0.2s; }
+#overlay > *:nth-child(4) { animation-delay: 0.3s; }
+
+.location-badge {
+  background: #fff;
+  border-radius: 20px;
+  padding: 8px 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.15);
+}
+.location-badge img { width: 160px; height: auto; max-width: 40vw; object-fit: contain; display: block; }
+
+.location-badge--sm {
+  padding: 6px 16px;
+  margin-bottom: 12px;
+}
+.location-badge--sm img { width: 110px; }
 
 #overlay img.logo {
-  width: 60%;
+  width: 56%;
+  max-width: 280px;
+  margin-bottom: 16px;
+}
+
+#overlay img.logo.end-title {
+  width: 62%;
   max-width: 300px;
-  margin-bottom: 25px;
+  margin-bottom: 12px;
+}
+
+.game-title-typed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Luckiest Guy", "Baloo 2", sans-serif;
+  font-weight: 400;
+  font-size: clamp(28px, 9vw, 66px);
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 24px;
+  max-width: 94%;
+}
+
+.title-word {
+  display: inline-block;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--game-name-color, #ed1c24);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 5px 0 var(--game-name-color, #ed1c24));
+}
+
+/* Poster-style bookend placement, matching the reference: the first word
+   is big and tilts left from the left edge, the last word is biggest and
+   tilts right from the right edge, and anything in between (there's just
+   one in "Catch the Food", but this holds for any word count the admin
+   types) is small, centered, and tilts the other way — a tight zigzag
+   stack rather than plain centered lines. */
+.title-word:first-child {
+  align-self: flex-start;
+  transform: rotate(-8deg);
+  margin: 0 0 -2px 1%;
+}
+
+.title-word:last-child {
+  align-self: flex-end;
+  font-size: 1.08em;
+  transform: rotate(3deg);
+  margin: -6px 1% 0 0;
+}
+
+.title-word:not(:first-child):not(:last-child) {
+  align-self: center;
+  font-size: 0.6em;
+  transform: rotate(6deg);
+  margin: -4px 6% 0 0;
+}
+
+/* A single-word game name is both first and last — keep it plain instead
+   of applying (and fighting over) both bookend treatments. */
+.title-word:first-child:last-child {
+  align-self: center;
+  font-size: 1em;
+  transform: none;
+  margin: 0;
 }
 
 #overlay img.start-btn {

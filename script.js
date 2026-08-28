@@ -75,6 +75,13 @@ const DEFAULT_CONFIG = {
     background: "img/background.png",
     timeUp: "img/time.png",
     playAgain: "img/again.png"
+  },
+  branding: {
+    locationName: "One Galle Face",
+    locationLogoPath: "img/logo/ogf.png",
+    gameName: "Catch the Food",
+    gameNameColor: "#ed1c24",
+    overlayColor: "#e44c9b"
   }
 };
 
@@ -119,7 +126,8 @@ async function loadRemoteConfig() {
         ...DEFAULT_CONFIG,
         ...data.game,
         audio: { ...DEFAULT_CONFIG.audio, ...(data.game.audio || {}) },
-        assets: { ...DEFAULT_CONFIG.assets, ...(data.game.assets || {}) }
+        assets: { ...DEFAULT_CONFIG.assets, ...(data.game.assets || {}) },
+        branding: { ...DEFAULT_CONFIG.branding, ...(data.game.branding || {}) }
       };
     }
     if (Array.isArray(data.brands) && data.brands.length) BRANDS = data.brands;
@@ -189,8 +197,12 @@ let items = [],
 let selectedBrand = null;
 
 // --- BRAND THEMING (frame/badge/HUD color, driven by the selected brand) ---
-const DEFAULT_THEME_PRIMARY = "#2f9e44";
-const DEFAULT_THEME_SECONDARY = "#ffd43b";
+// Default (no brand picked yet — start/brand-select/end screens) uses the
+// event's own red/cream palette instead of a generic green, so the hill
+// frame and badges match the pink One Galle Face branding instead of
+// clashing with it.
+const DEFAULT_THEME_PRIMARY = "#ed1c24";
+const DEFAULT_THEME_SECONDARY = "#f5e2c4";
 let currentThemeColor = DEFAULT_THEME_PRIMARY;
 let currentThemeSecondary = DEFAULT_THEME_SECONDARY;
 
@@ -432,14 +444,50 @@ function spawnItem() {
   setTimeout(spawnItem, nextSpawn);
 }
 
+// Pushes the admin-set branding colors onto the CSS custom properties the
+// stylesheet reads (--overlay-color for the start/end screen background,
+// --game-name-color for the typed game-name stroke/shadow), so the same
+// markup/CSS works for any location's colors without a code change.
+function applyBranding() {
+  const b = CONFIG.branding || {};
+  document.documentElement.style.setProperty("--overlay-color", b.overlayColor || DEFAULT_CONFIG.branding.overlayColor);
+  document.documentElement.style.setProperty("--game-name-color", b.gameNameColor || DEFAULT_CONFIG.branding.gameNameColor);
+  const gameName = b.gameName || DEFAULT_CONFIG.branding.gameName;
+  const locationName = b.locationName || DEFAULT_CONFIG.branding.locationName;
+  document.title = locationName ? `${gameName} - ${locationName}` : gameName;
+}
+
+function locationBadgeHtml(sizeClass) {
+  const b = CONFIG.branding || {};
+  if (!b.locationLogoPath) return "";
+  return `<div class="location-badge${sizeClass ? ` ${sizeClass}` : ""}"><img src="${resolveAssetUrl(b.locationLogoPath)}" alt="${escapeHtml(b.locationName || "")}"></div>`;
+}
+
+// Breaks the admin-typed game name into one word per line, like the poster
+// reference ("CATCH" / "THE" / "FOOD" each on their own line, staggered
+// left/right with alternating tilt) — driven by CSS nth-child(odd/even) on
+// .title-word so it still works for any word count the admin types in.
+function renderGameTitle(text) {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => `<span class="title-word">${escapeHtml(word)}</span>`)
+    .join("");
+}
+
 function showStartScreen() {
   gameBadgeEl.hidden = true;
   statsHudEl.hidden = true;
   countdownActive = false;
   resetTheme();
+  applyBranding();
+  const b = CONFIG.branding || {};
   overlay.innerHTML = `
-        <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
-        <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
+        ${locationBadgeHtml()}
+        <img src="${resolveAssetUrl(CONFIG.assets.logo)}" alt="${escapeHtml(b.locationName || "")}" class="logo">
+        <div class="game-title-typed">${renderGameTitle(b.gameName)}</div>
+        <img src="${resolveAssetUrl(CONFIG.assets.startButton)}" alt="Start" class="start-btn" onclick="showBrandSelect()">
     `;
   overlay.style.display = "flex";
 }
@@ -527,7 +575,8 @@ function initGame() {
       clearInterval(ti);
 
       overlay.innerHTML = `
-            <img src="${resolveAssetUrl(CONFIG.assets.timeUp)}" alt="Time's Up" class="logo">
+            ${locationBadgeHtml("location-badge--sm")}
+            <img src="${resolveAssetUrl(CONFIG.assets.timeUp)}" alt="Time's Up" class="logo end-title">
             <div class="total-score">
               <label>Total Score</label>
               <span>${score}</span>
@@ -708,6 +757,7 @@ function draw() {
 async function init() {
   await loadRemoteConfig();
   TARGET_HUE = hexToHue(CONFIG.targetColor);
+  applyBranding();
 
   // The game now fills the viewport (#game-wrapper is 100vw x 100vh), so the
   // canvas's internal drawing resolution is set to match its actual on-screen

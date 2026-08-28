@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Fruit Catcher - Pro Edition</title>
+  <title>Catch the Food - One Galle Face</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Luckiest+Guy&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"
@@ -46,8 +46,10 @@
       </div>
 
       <div id="overlay">
-        <img src="img/logo.png" alt="AR Fruit Catcher Logo" style="width:300px; margin-bottom:25px;">
-        <img src="img/btn.png" alt="Start Mission" style="cursor:pointer; width:250px;" onclick="showBrandSelect()">
+        <div class="location-badge"><img src="img/logo/ogf.png" alt="One Galle Face"></div>
+        <img src="img/logo.png" alt="One Galle Face" class="logo">
+        <div class="game-title-typed"><span class="title-word">Catch</span><span class="title-word">the</span><span class="title-word">Food</span></div>
+        <img src="img/btn.png" alt="Start" class="start-btn" onclick="showBrandSelect()">
       </div>
 
       <div id="brandSelect"></div>

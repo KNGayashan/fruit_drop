@@ -147,7 +147,8 @@ const DEFAULT_GAME_CONFIG = {
     locationName: "One Galle Face",
     locationLogoPath: "img/logo/ogf.png",
     gameName: "Catch the Food",
-    overlayColor: "#f0409c"
+    gameNameColor: "#ed1c24",
+    overlayColor: "#e44c9b"
   }
 };
 
@@ -155,11 +156,26 @@ const existingConfigRow = db.prepare("SELECT data FROM game_config WHERE id = 1"
 if (!existingConfigRow) {
   db.prepare("INSERT INTO game_config (id, data) VALUES (1, ?)").run(JSON.stringify(DEFAULT_GAME_CONFIG));
 } else {
-  // Migration: backfill fields added after the config row already existed
-  // (e.g. `branding`), without touching anything an admin already changed.
+  // Migration: backfill top-level and branding/assets/audio sub-fields added
+  // after the config row already existed, without touching anything an
+  // admin already changed. Per-field (not just "does .branding exist") so
+  // adding one more branding field later doesn't require another migration.
   const existing = JSON.parse(existingConfigRow.data);
-  if (!existing.branding) {
-    existing.branding = DEFAULT_GAME_CONFIG.branding;
+  let changed = false;
+  for (const key of Object.keys(DEFAULT_GAME_CONFIG)) {
+    if (existing[key] === undefined) {
+      existing[key] = DEFAULT_GAME_CONFIG[key];
+      changed = true;
+    } else if (typeof DEFAULT_GAME_CONFIG[key] === "object" && DEFAULT_GAME_CONFIG[key] !== null) {
+      for (const subKey of Object.keys(DEFAULT_GAME_CONFIG[key])) {
+        if (existing[key][subKey] === undefined) {
+          existing[key][subKey] = DEFAULT_GAME_CONFIG[key][subKey];
+          changed = true;
+        }
+      }
+    }
+  }
+  if (changed) {
     db.prepare("UPDATE game_config SET data = ? WHERE id = 1").run(JSON.stringify(existing));
   }
 }
