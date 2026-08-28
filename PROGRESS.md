@@ -54,7 +54,7 @@ just reading code):
 - Gameplay background stretched to exactly fill the canvas instead of
   "cover"-fit scaling, distorting non-matching aspect ratios
 
-## In progress — One Galle Face event branding
+## Done — One Galle Face event branding
 
 Reference: a pink/magenta landing page with "ONE GALLE FACE" location
 branding at top, the existing "HUNGRY GAMES" logo asset below it, then a
@@ -64,23 +64,58 @@ large comic-style "CATCH THE FOOD" game name, and a play button.
       `locationLogoPath` (defaults to the real `img/logo/ogf.png` asset,
       already in the repo), `gameName` (plain text, not an image — typed
       by the admin, rendered with the same comic-book stroke+shadow CSS
-      treatment as the existing logo art), `overlayColor`. Migrated onto
-      the existing live config row.
-- [x] Admin UI: text inputs for location name / game name, color picker
-      for the start/end screen background, image upload for the location
-      logo — added to the Game Settings tab's Branding group.
-- [ ] Frontend: rebuild `showStartScreen()` to show the location badge,
-      existing logo image, and the new typed+styled game name, above the
-      play button. Apply the pink `overlayColor` (+ patterned background)
-      to `#overlay`.
-- [ ] Restyle the end/scoring screen so it's cohesive against the new pink
-      background (currently shares `#overlay` with the start screen, so
-      much of this comes for free once the overlay background changes —
-      still need to check contrast/readability of the score card).
+      treatment as the existing logo art), `overlayColor`, `gameNameColor`.
+      Migrated onto the existing live config row.
+- [x] Admin UI: text inputs for location name / game name, color pickers
+      for the game-name outline and start/end screen background, image
+      upload for the location logo — in the Game Settings tab's Branding
+      group.
+- [x] Frontend: `showStartScreen()` renders the location badge (logo pill),
+      the "HUNGRY GAMES" logo image, and the typed+styled game name above
+      the play button. `applyBranding()` pushes `overlayColor`/
+      `gameNameColor` onto CSS custom properties on load. Cropped the
+      transparent padding off `img/logo.png` and `img/logo/ogf.png` so
+      they render at a legible size instead of mostly empty canvas.
+- [x] End/scoring screen redesigned to match: small location badge +
+      "TIME'S UP!" + score card + "Play Again", same pink patterned
+      `#overlay` background (shared with the start screen). Verified
+      layout/contrast with a scripted Playwright pass (start screen,
+      brand-select, and a full played-out round) — no clipping or
+      overlap at 900x1400.
+- [x] Follow-up polish pass, color-matched by sampling the actual reference
+      poster PNG (`AI Cover.png`) with PIL: `overlayColor` → `#e44c9b`,
+      `gameNameColor` → `#ed1c24`. `DEFAULT_THEME_PRIMARY`/`_SECONDARY`
+      (the `#game-frame` hill border/badges shown when no brand is picked)
+      changed from green/yellow to red/cream so the frame no longer
+      clashes with the pink event branding.
+- [x] `#overlay`'s food-doodle pattern switched from a small tiled repeat
+      to `background-size: cover; background-repeat: no-repeat` — one
+      large scaled instance instead of many tiny repeated icons.
+- [x] Typed game name (`branding.gameName`) now renders in the "Luckiest
+      Guy" Google Font, one word per line via `renderGameTitle()` in
+      `script.js`, with CSS-only staggered poster placement
+      (`.title-word:first-child`/`:last-child`/middle selectors — big+left,
+      small+centered, big+right) so it works for any admin-typed name, not
+      just the literal "Catch the Food" case.
+- [ ] Not verified live: the color/border changes above were checked via
+      a scripted Playwright pass against the running dev servers, not
+      by the client in a real browser session — worth a final look.
+
+## Admin dashboard
+
+- [x] Leaderboard tab: "Reset Leaderboard" button next to the brand
+      filter (`backend/public/index.html`/`admin.js`), backed by
+      `DELETE /api/admin/scores` (`backend/routes/admin.js`) — clears
+      every score, or just the currently-filtered brand's scores if one's
+      selected. Confirms before deleting; existing per-row delete is
+      unchanged.
 
 ## Branch / repo
 
 Working on `Gayan` branch of `https://github.com/KNGayashan/fruit_drop`,
-pushed after each verified change. `frontend_designs/` holds mockup
-directions explored before implementation (screenshots + source HTML),
-kept for reference.
+pushed after each verified change. `frontend_designs/` (pre-implementation
+mockup explorations) and `backup_original/` (pre-rewrite zips) were removed
+once the pink One Galle Face design was implemented and verified — no
+longer needed for reference. Stale `index.txt` (an old pre-rewrite copy of
+`index.html`) and orphaned `img/trophy.png` (unused since the player-facing
+leaderboard was removed) were also cleaned up.

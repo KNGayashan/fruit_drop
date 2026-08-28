@@ -343,6 +343,19 @@ brandFilter.addEventListener("change", () => {
   loadScores();
 });
 
+document.getElementById("reset-leaderboard-btn").addEventListener("click", async () => {
+  const brand = brandFilter.value;
+  const scope = brand ? `all "${brand}" scores` : "the ENTIRE leaderboard";
+  if (!confirm(`Reset ${scope}? This permanently deletes those score records and can't be undone.`)) return;
+
+  const params = new URLSearchParams();
+  if (brand) params.set("brand", brand);
+  await authedFetch(`/api/admin/scores?${params}`, { method: "DELETE" });
+  page = 1;
+  loadScores();
+  loadStats();
+});
+
 // --- Tabs ---
 let cachedBrands = [];
 
@@ -423,6 +436,7 @@ const SETTINGS_FIELDS = [
   { group: "Audio", key: "audio.beepLongDurationSec", label: "Long beep duration (sec)", step: "0.01" },
   { group: "Branding", key: "branding.locationName", label: "Location name", type: "text" },
   { group: "Branding", key: "branding.gameName", label: "Game name (typed, styled to match \"HUNGRY GAMES\")", type: "text" },
+  { group: "Branding", key: "branding.gameNameColor", label: "Game name outline color", type: "color" },
   { group: "Branding", key: "branding.overlayColor", label: "Start/end screen background color", type: "color" }
 ];
 

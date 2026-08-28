@@ -285,6 +285,16 @@ router.delete("/scores/:id", (req, res) => {
   res.status(204).end();
 });
 
+// Bulk reset — clears the whole leaderboard, or just one brand's scores if
+// ?brand= is given (matches the same filter the Leaderboard tab's table uses).
+router.delete("/scores", (req, res) => {
+  const brand = req.query.brand || null;
+  const info = brand
+    ? db.prepare("DELETE FROM scores WHERE brand = ?").run(brand)
+    : db.prepare("DELETE FROM scores").run();
+  res.json({ deleted: info.changes });
+});
+
 router.get("/stats", (req, res) => {
   const totalPlays = db.prepare("SELECT COUNT(*) AS c FROM scores").get().c;
   const topScore = db.prepare("SELECT MAX(score) AS m FROM scores").get().m || 0;
