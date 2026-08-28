@@ -97,6 +97,7 @@ function mergeConfig(current, incoming) {
   const merged = { ...current, ...incoming };
   if (incoming.audio) merged.audio = { ...current.audio, ...incoming.audio };
   if (incoming.assets) merged.assets = { ...current.assets, ...incoming.assets };
+  if (incoming.branding) merged.branding = { ...current.branding, ...incoming.branding };
   return merged;
 }
 

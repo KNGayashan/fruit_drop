@@ -420,7 +420,10 @@ const SETTINGS_FIELDS = [
   { group: "Audio", key: "audio.catchBeepFreq", label: "Catch beep freq (Hz)" },
   { group: "Audio", key: "audio.hitBeepFreq", label: "Hit beep freq (Hz)" },
   { group: "Audio", key: "audio.beepShortDurationSec", label: "Short beep duration (sec)", step: "0.01" },
-  { group: "Audio", key: "audio.beepLongDurationSec", label: "Long beep duration (sec)", step: "0.01" }
+  { group: "Audio", key: "audio.beepLongDurationSec", label: "Long beep duration (sec)", step: "0.01" },
+  { group: "Branding", key: "branding.locationName", label: "Location name", type: "text" },
+  { group: "Branding", key: "branding.gameName", label: "Game name (typed, styled to match \"HUNGRY GAMES\")", type: "text" },
+  { group: "Branding", key: "branding.overlayColor", label: "Start/end screen background color", type: "color" }
 ];
 
 const ASSET_FIELDS = [
@@ -429,7 +432,8 @@ const ASSET_FIELDS = [
   { key: "assets.basket", label: "Basket" },
   { key: "assets.background", label: "Background" },
   { key: "assets.timeUp", label: "Time's up image" },
-  { key: "assets.playAgain", label: "Play again button" }
+  { key: "assets.playAgain", label: "Play again button" },
+  { key: "branding.locationLogoPath", label: "Location logo" }
 ];
 
 const settingsForm = document.getElementById("settings-form");
@@ -456,7 +460,7 @@ function renderSettings(config) {
           (f) => `
         <label class="field-row">
           <span>${escapeHtml(f.label)}</span>
-          <input type="${f.type || "number"}" data-key="${f.key}" value="${getPath(config, f.key)}" ${f.step ? `step="${f.step}"` : ""} />
+          <input type="${f.type || "number"}" data-key="${f.key}" value="${escapeHtml(getPath(config, f.key))}" ${f.step ? `step="${f.step}"` : ""} />
         </label>`
         )
         .join("")}

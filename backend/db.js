@@ -142,11 +142,26 @@ const DEFAULT_GAME_CONFIG = {
     background: "img/background.png",
     timeUp: "img/time.png",
     playAgain: "img/again.png"
+  },
+  branding: {
+    locationName: "One Galle Face",
+    locationLogoPath: "img/logo/ogf.png",
+    gameName: "Catch the Food",
+    overlayColor: "#f0409c"
   }
 };
 
-if (db.prepare("SELECT COUNT(*) AS c FROM game_config").get().c === 0) {
+const existingConfigRow = db.prepare("SELECT data FROM game_config WHERE id = 1").get();
+if (!existingConfigRow) {
   db.prepare("INSERT INTO game_config (id, data) VALUES (1, ?)").run(JSON.stringify(DEFAULT_GAME_CONFIG));
+} else {
+  // Migration: backfill fields added after the config row already existed
+  // (e.g. `branding`), without touching anything an admin already changed.
+  const existing = JSON.parse(existingConfigRow.data);
+  if (!existing.branding) {
+    existing.branding = DEFAULT_GAME_CONFIG.branding;
+    db.prepare("UPDATE game_config SET data = ? WHERE id = 1").run(JSON.stringify(existing));
+  }
 }
 
 if (db.prepare("SELECT COUNT(*) AS c FROM brands").get().c === 0) {
