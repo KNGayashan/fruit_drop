@@ -186,12 +186,18 @@ let basket = { x: 190, y: 500, width: 120, height: 120 };
 let basketSquash = 0; // 0..1, decays each frame — brief squash/stretch feedback on catch
 let comboStreak = 0; // consecutive good catches; resets on a bad catch
 
-// Item/basket sizes are tuned in CONFIG against a 500px-wide reference canvas.
+// Item/basket sizes are tuned in CONFIG against a 500x640 reference canvas.
 // Since the canvas now matches the real screen's resolution (could be a small
-// phone or a large kiosk display), sizes are scaled by this factor so items
-// stay proportional to the actual screen instead of looking tiny on big
-// displays or oversized on small ones. Clamped to keep either extreme sane.
+// phone, a tall kiosk display, or a wide/short landscape kiosk), sizes are
+// scaled by the *smaller* of the width and height ratios so items stay
+// proportional to whichever dimension is actually tight — width alone was
+// fine while every target screen was portrait (height >= width, so width
+// was always the binding constraint), but on a landscape canvas like
+// 800x600 it let items/basket balloon to the width-driven max scale despite
+// there being much less vertical room to fall in. Clamped to keep either
+// extreme sane.
 const SIZE_REFERENCE_WIDTH = 500;
+const SIZE_REFERENCE_HEIGHT = 640;
 let sizeScale = 1;
 let score = 0,
   timeLeft = 60,
@@ -773,12 +779,21 @@ async function init() {
   const canvasRect = canvas.getBoundingClientRect();
   canvas.width = canvasRect.width > 0 ? Math.round(canvasRect.width) : CONFIG.canvasWidth;
   canvas.height = canvasRect.height > 0 ? Math.round(canvasRect.height) : window.innerHeight;
-  sizeScale = Math.max(0.6, Math.min(1.6, canvas.width / SIZE_REFERENCE_WIDTH));
+  const widthScale = canvas.width / SIZE_REFERENCE_WIDTH;
+  const heightScale = canvas.height / SIZE_REFERENCE_HEIGHT;
+  sizeScale = Math.max(0.6, Math.min(1.6, Math.min(widthScale, heightScale)));
+  const basketW = CONFIG.basketWidth * sizeScale;
+  const basketH = CONFIG.basketHeight * sizeScale;
+  // basketStartX/Y are tuned against a tall reference canvas; on a short/wide
+  // canvas (e.g. a 800x600 landscape kiosk) that fixed Y can sit past the
+  // visible area, clipping the basket into the bottom decorative frame.
+  // Clamped to stay fully on-screen with room above the frame — a no-op on
+  // canvases tall/wide enough that the configured value already fits.
   basket = {
-    x: CONFIG.basketStartX,
-    y: CONFIG.basketStartY,
-    width: CONFIG.basketWidth * sizeScale,
-    height: CONFIG.basketHeight * sizeScale
+    x: Math.min(CONFIG.basketStartX, canvas.width - basketW - 10),
+    y: Math.min(CONFIG.basketStartY, canvas.height * 0.86 - basketH),
+    width: basketW,
+    height: basketH
   };
 
   trackCanvas = document.createElement("canvas");

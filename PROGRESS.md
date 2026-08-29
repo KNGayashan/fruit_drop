@@ -110,6 +110,45 @@ large comic-style "CATCH THE FOOD" game name, and a play button.
       selected. Confirms before deleting; existing per-row delete is
       unchanged.
 
+## Hosting / deployment
+
+- [x] Fixed the real hosting blocker flagged earlier: `script.js` had
+      `API_BASE` hardcoded to `http://localhost:3000`, which would break
+      for every real visitor. `backend/server.js` now serves the game
+      frontend itself (`index.html`/`script.js`/`styles.css`/`img/`,
+      individually routed — not a blanket static mount, so nothing else
+      in the repo is exposed over HTTP) from the same origin as the API.
+      `API_BASE` defaults to `""` (same-origin), overridable via
+      `<meta name="api-base" content="...">` if the frontend is ever
+      split across origins again. Old two-terminal local dev (frontend on
+      :8000 via `python -m http.server`, backend on :3000) still loads
+      but degrades to built-in defaults instead of hard-crashing, since
+      :8000 has no `/api/*` of its own anymore — `npm start` + visiting
+      the backend's own port directly is now the one supported path.
+      Helmet's CSP is explicitly disabled (`contentSecurityPolicy: false`)
+      since the frontend loads MediaPipe/Google Fonts from CDNs and uses
+      inline `onclick=""` throughout — it ran with no CSP at all before
+      (separate static server), so this isn't a new gap.
+- [x] Dockerized: root `Dockerfile` (node:22-bookworm-slim, no native
+      build step needed — `node:sqlite` and `bcryptjs` are both
+      pure-JS/built-in) + `docker-compose.yml` exposing port 3004, with
+      `backend/data` and `backend/uploads` on named volumes so the
+      leaderboard DB and uploaded images survive rebuilds/restarts.
+      `backend/.env` is supplied via `env_file`, never baked into the
+      image. Verified end-to-end: built the image, ran it via
+      `docker compose up`, hit every route (game, `/script.js`,
+      `/styles.css`, `/img/*`, `/api/config`, `/admin/`), confirmed
+      `backend/data`/`.env` aren't exposed over HTTP, submitted a score
+      and restarted the container to confirm the volume persists it, and
+      screenshotted the game rendering correctly through the container.
+- [ ] Not yet deployed anywhere. Target is a new EC2 instance (details
+      pending from the client) — the current CloudPanel box
+      (`hungry.dev.enfection.com`, `13.234.239.238`) was blocked on SSH
+      (port 22 unreachable despite CloudPanel's own firewall page showing
+      it open to `0.0.0.0/0` — almost certainly a separate AWS Security
+      Group not exposed in CloudPanel) and was set aside in favor of the
+      new instance once it's ready.
+
 ## Branch / repo
 
 Working on `Gayan` branch of `https://github.com/KNGayashan/fruit_drop`,

@@ -335,6 +335,55 @@ canvas {
   transform: scale(0.94);
 }
 
+/* Compact start/end screen for short viewports — specifically the 512x640
+   kiosk displays this game is actually played on. At the default sizing
+   above, the location badge clips off the top and the start button clips
+   off the bottom at 640px tall (measured: ~671px of content in a 640px
+   box). Everything below is deliberately smaller/tighter, not just
+   scaled down blindly, so it still reads clearly at kiosk viewing
+   distance instead of looking like a shrunken desktop layout. */
+@media (max-height: 700px) {
+  #overlay {
+    padding: 10px;
+  }
+
+  .location-badge {
+    padding: 6px 16px;
+    margin-bottom: 10px;
+  }
+  .location-badge img { width: 120px; }
+  .location-badge--sm { padding: 4px 12px; margin-bottom: 6px; }
+  .location-badge--sm img { width: 90px; }
+
+  #overlay img.logo {
+    width: 42%;
+    max-width: 190px;
+    margin-bottom: 10px;
+  }
+  #overlay img.logo.end-title {
+    width: 48%;
+    max-width: 210px;
+    margin-bottom: 8px;
+  }
+
+  .game-title-typed {
+    font-size: clamp(20px, 7vw, 34px);
+    margin-bottom: 12px;
+  }
+
+  #overlay img.start-btn {
+    width: 34%;
+    max-width: 150px;
+  }
+
+  .total-score {
+    padding: 12px 34px 14px;
+    margin: 8px 0 6px;
+  }
+  .total-score span { font-size: 34px; }
+  .total-score label { font-size: 10px; }
+}
+
 #brandSelect {
   position: absolute;
   top: 0;
