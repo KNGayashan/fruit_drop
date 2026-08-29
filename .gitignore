@@ -1,0 +1,6 @@
+# Sensitive / local-only — never commit
+dummy
+*.ppk
+*.pem
+.env
+backend/.env

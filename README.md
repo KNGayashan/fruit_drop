@@ -13,17 +13,7 @@ A single-page browser game. Move an on-screen basket by moving a colored rectang
 
 ## Running the game
 
-The frontend has no build system or package manager — [index.html](index.html) links [styles.css](styles.css) and [script.js](script.js) directly. Because webcam access requires a secure context, you can't just open the file directly (`file://`); serve it over HTTP instead:
-
-```
-python -m http.server 8000
-```
-
-Then visit `http://localhost:8000/index.html` and grant camera permission when prompted.
-
-### Backend (config + leaderboard + admin)
-
-The game fetches its entire configuration — not just the leaderboard — from a small Node/Express + SQLite API in [backend/](backend/). It must be running for the game to reflect any admin-made changes (it falls back to built-in defaults and an empty leaderboard if the backend isn't reachable):
+The frontend has no build system or package manager — [index.html](index.html), [styles.css](styles.css), and [script.js](script.js) are plain static files. The backend (below) now serves them itself, same origin as its API, so there's just one thing to run:
 
 ```
 cd backend
@@ -32,11 +22,19 @@ cp .env.example .env   # then set a real JWT_SECRET (see backend/README.md)
 npm start
 ```
 
+Then visit `http://localhost:3000/` and grant camera permission when prompted (webcam access requires a secure context — `http://localhost` is exempt, but a real deployment needs `https://`).
+
+Or run it containerized — see [HOW_TO_RUN.md](HOW_TO_RUN.md#running-with-docker) for the Docker/`docker-compose` setup (defaults to port 3004, with the SQLite DB and uploaded images persisted via named volumes).
+
+### Backend (config + leaderboard + admin)
+
+The game fetches its entire configuration — not just the leaderboard — from the same Node/Express + SQLite API in [backend/](backend/) that serves it. It must be running for the game to reflect any admin-made changes (it falls back to built-in defaults and an empty leaderboard if the API isn't reachable).
+
 Admin dashboard: `http://localhost:3000/admin/`. On first visit you'll be prompted to create the one admin account — no shared/default credentials. From there:
-- **Game Settings** — round duration, scoring/difficulty curve, item speed & spawn timing, basket/canvas size, tracked color + tolerances, tracking sensitivity, audio tones, and core UI images.
+- **Game Settings** — round duration, scoring/difficulty curve, item speed & spawn timing, basket/canvas size, tracked color + tolerances, tracking sensitivity, audio tones, core UI images, and branding (location name/logo, typed game name, colors).
 - **Brands** — add/edit/remove brands, each with its own logo and score icon.
 - **Items** — the fruits/bombs that fall during play: image, points (negative = penalty item), spawn weight, and which brand(s) it belongs to.
-- **Leaderboard** — scores, stats, screen-size breakdown, per-brand filtering.
+- **Leaderboard** — scores, stats, screen-size breakdown, per-brand filtering, and a reset button.
 
 ## Controls
 

@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules
+backend/node_modules
+backend/data
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/.env
+dummy
+*.md

@@ -1,0 +1,18 @@
+services:
+  catch-the-food:
+    build: .
+    container_name: catch-the-food
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    env_file:
+      - backend/.env
+    environment:
+      - PORT=3004
+    volumes:
+      - catch_data:/app/backend/data
+      - catch_uploads:/app/backend/uploads
+
+volumes:
+  catch_data:
+  catch_uploads:

@@ -15,7 +15,12 @@ const gameWrapper = document.getElementById("game-wrapper");
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // --- BACKEND ---
-const API_BASE = "http://localhost:3000";
+// Empty string = same-origin: the backend (backend/server.js) now serves this
+// game frontend itself, so /api/... and /uploads/... resolve against whatever
+// host/port the page was loaded from instead of a hardcoded dev URL. Override
+// via <meta name="api-base" content="https://..."> if the frontend is ever
+// served from a different origin than the API again.
+const API_BASE = document.querySelector('meta[name="api-base"]')?.content || "";
 
 function resolveAssetUrl(p) {
   if (!p) return "";
